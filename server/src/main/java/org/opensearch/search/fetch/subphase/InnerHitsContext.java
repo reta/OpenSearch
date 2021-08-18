@@ -35,7 +35,7 @@ package org.opensearch.search.fetch.subphase;
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.search.CollectionTerminatedException;
 import org.apache.lucene.search.Collector;
-import org.apache.lucene.search.ConjunctionDISI;
+import org.apache.lucene.search.ConjunctionUtils;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.LeafCollector;
 import org.apache.lucene.search.ScoreMode;
@@ -189,9 +189,8 @@ public final class InnerHitsContext {
 
         try {
             Bits acceptDocs = ctx.reader().getLiveDocs();
-            DocIdSetIterator iterator = ConjunctionDISI.intersectIterators(
-                Arrays.asList(innerHitQueryScorer.iterator(), scorer.iterator())
-            );
+            DocIdSetIterator iterator = ConjunctionUtils.intersectIterators(
+                Arrays.asList(innerHitQueryScorer.iterator(), scorer.iterator()));
             for (int docId = iterator.nextDoc(); docId < DocIdSetIterator.NO_MORE_DOCS; docId = iterator.nextDoc()) {
                 if (acceptDocs == null || acceptDocs.get(docId)) {
                     leafCollector.collect(docId);

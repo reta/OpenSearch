@@ -107,14 +107,19 @@ public class DisableGraphQueryTests extends OpenSearchSingleNodeTestCase {
         // parsed queries for "text_shingle_unigram:(foo bar baz)" with query parsers
         // that ignores position length attribute
         expectedQueryWithUnigram = new BooleanQuery.Builder().add(
-            new SynonymQuery(new Term("text_shingle_unigram", "foo"), new Term("text_shingle_unigram", "foo bar")),
-            BooleanClause.Occur.SHOULD
-        )
+                new SynonymQuery.Builder("text_shingle_unigram")
+                    .addTerm(new Term("text_shingle_unigram", "foo"))
+                    .addTerm(new Term("text_shingle_unigram", "foo bar")).build(),
+                BooleanClause.Occur.SHOULD)
             .add(
-                new SynonymQuery(new Term("text_shingle_unigram", "bar"), new Term("text_shingle_unigram", "bar baz")),
-                BooleanClause.Occur.SHOULD
-            )
-            .add(new TermQuery(new Term("text_shingle_unigram", "baz")), BooleanClause.Occur.SHOULD)
+                new SynonymQuery.Builder("text_shingle_unigram")
+                    .addTerm(new Term("text_shingle_unigram", "bar"))
+                    .addTerm(new Term("text_shingle_unigram", "bar baz")).build(),
+                BooleanClause.Occur.SHOULD)
+            .add(
+                new TermQuery(
+                    new Term("text_shingle_unigram", "baz")
+                ), BooleanClause.Occur.SHOULD)
             .build();
 
         // parsed query for "text_shingle_unigram:\"foo bar baz\" with query parsers

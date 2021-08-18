@@ -64,6 +64,7 @@ import org.apache.lucene.analysis.de.GermanAnalyzer;
 import org.apache.lucene.analysis.de.GermanNormalizationFilter;
 import org.apache.lucene.analysis.de.GermanStemFilter;
 import org.apache.lucene.analysis.el.GreekAnalyzer;
+import org.apache.lucene.analysis.email.UAXclassic;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.en.KStemFilter;
 import org.apache.lucene.analysis.en.PorterStemFilter;

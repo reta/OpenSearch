@@ -32,8 +32,12 @@
 
 package org.opensearch.index.query;
 
+import org.apache.lucene.index.Term;
+import org.apache.lucene.queries.spans.SpanTermQuery;
+import org.apache.lucene.search.BoostQuery;
 import org.apache.lucene.search.Query;
-import org.apache.lucene.search.spans.FieldMaskingSpanQuery;
+import org.apache.lucene.queries.spans.FieldMaskingSpanQuery;
+import org.opensearch.common.ParsingException;
 import org.opensearch.test.AbstractQueryTestCase;
 
 import java.io.IOException;
@@ -52,6 +56,7 @@ public class FieldMaskingSpanQueryBuilderTests extends AbstractQueryTestCase<Fie
             fieldName = randomAlphaOfLengthBetween(1, 10);
         }
         SpanTermQueryBuilder innerQuery = new SpanTermQueryBuilderTests().createTestQueryBuilder();
+        innerQuery.boost(1f);
         return new FieldMaskingSpanQueryBuilder(innerQuery, fieldName);
     }
 
@@ -73,27 +78,46 @@ public class FieldMaskingSpanQueryBuilderTests extends AbstractQueryTestCase<Fie
     }
 
     public void testFromJson() throws IOException {
-        String json = "{\n"
-            + "  \""
-            + SPAN_FIELD_MASKING_FIELD.getPreferredName()
-            + "\" : {\n"
-            + "    \"query\" : {\n"
-            + "      \"span_term\" : {\n"
-            + "        \"value\" : {\n"
-            + "          \"value\" : 0.5,\n"
-            + "          \"boost\" : 0.23\n"
-            + "        }\n"
-            + "      }\n"
-            + "    },\n"
-            + "    \"field\" : \"mapped_geo_shape\",\n"
-            + "    \"boost\" : 42.0,\n"
-            + "    \"_name\" : \"KPI\"\n"
-            + "  }\n"
-            + "}";
-        FieldMaskingSpanQueryBuilder parsed = (FieldMaskingSpanQueryBuilder) parseQuery(json);
-        checkGeneratedJson(json, parsed);
-        assertEquals(json, 42.0, parsed.boost(), 0.00001);
-        assertEquals(json, 0.23, parsed.innerQuery().boost(), 0.00001);
+        String json =
+                "{\n" +
+                "  \"field_masking_span\" : {\n" +
+                "    \"query\" : {\n" +
+                "      \"span_term\" : {\n" +
+                "        \"value\" : {\n" +
+                "          \"value\" : 0.5,\n" +
+                "          \"boost\" : 0.23\n" +
+                "        }\n" +
+                "      }\n" +
+                "    },\n" +
+                "    \"field\" : \"mapped_geo_shape\",\n" +
+                "    \"boost\" : 42.0,\n" +
+                "    \"_name\" : \"KPI\"\n" +
+                "  }\n" +
+                "}";
+        Exception exception = expectThrows(ParsingException.class, () -> parseQuery(json));
+        assertThat(exception.getMessage(),
+            equalTo("field_masking_span [query] as a nested span clause can't have non-default boost value [0.23]"));
+    }
+
+    public void testJsonSpanTermWithBoost() throws IOException {
+        String json =
+            "{\n" +
+                "  \"field_masking_span\" : {\n" +
+                "    \"query\" : {\n" +
+                "      \"span_term\" : {\n" +
+                "        \"value\" : {\n" +
+                "          \"value\" : \"term\",\n" +
+                "        }\n" +
+                "      }\n" +
+                "    },\n" +
+                "    \"field\" : \"mapped_geo_shape\",\n" +
+                "    \"boost\" : 42.0,\n" +
+                "    \"_name\" : \"KPI\"\n" +
+                "  }\n" +
+                "}";
+        Query query = parseQuery(json).toQuery(createShardContext());
+        assertEquals(new BoostQuery(new FieldMaskingSpanQuery(
+            new SpanTermQuery(new Term("value", "term")), "mapped_geo_shape"), 42f), query);
     }
 
     public void testDeprecatedName() throws IOException {

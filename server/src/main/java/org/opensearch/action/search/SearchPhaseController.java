@@ -239,10 +239,10 @@ public final class SearchPhaseController {
             TopFieldDocs firstTopDocs = (TopFieldDocs) topDocs;
             final Sort sort = new Sort(firstTopDocs.fields);
             final TopFieldDocs[] shardTopDocs = results.toArray(new TopFieldDocs[numShards]);
-            mergedTopDocs = TopDocs.merge(sort, from, topN, shardTopDocs, setShardIndex);
+            mergedTopDocs = TopDocs.merge(sort, from, topN, shardTopDocs);
         } else {
             final TopDocs[] shardTopDocs = results.toArray(new TopDocs[numShards]);
-            mergedTopDocs = TopDocs.merge(from, topN, shardTopDocs, setShardIndex);
+            mergedTopDocs = TopDocs.merge(from, topN, shardTopDocs);
         }
         return mergedTopDocs;
     }

@@ -125,17 +125,16 @@ public class AnalysisModuleTests extends OpenSearchTestCase {
     }
 
     private Settings loadFromClasspath(String path) throws IOException {
-        return Settings.builder()
-            .loadFromStream(path, getClass().getResourceAsStream(path), false)
-            .put(IndexMetadata.SETTING_VERSION_CREATED, Version.CURRENT)
-            .put(Environment.PATH_HOME_SETTING.getKey(), createTempDir().toString())
-            .build();
-
+        return Settings.builder().loadFromStream(path, getClass().getResourceAsStream(path), false)
+                .put(IndexMetadata.SETTING_VERSION_CREATED, Version.CURRENT)
+                .put(Environment.PATH_HOME_SETTING.getKey(), createTempDir().toString())
+                .build();
     }
 
     public void testSimpleConfigurationJson() throws IOException {
         Settings settings = loadFromClasspath("/org/opensearch/index/analysis/test1.json");
         testSimpleConfiguration(settings);
+        assertWarnings("[version] for analysis [custom7] is deprecated and will be removed in a future version.");
     }
 
     public void testSimpleConfigurationYaml() throws IOException {

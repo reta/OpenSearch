@@ -40,7 +40,6 @@ import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.IndexFileNames;
 import org.apache.lucene.index.IndexFormatTooNewException;
 import org.apache.lucene.index.IndexFormatTooOldException;
 import org.apache.lucene.index.IndexNotFoundException;
@@ -502,13 +501,9 @@ public class StoreTests extends OpenSearchTestCase {
 
     public static void assertConsistent(Store store, Store.MetadataSnapshot metadata) throws IOException {
         for (String file : store.directory().listAll()) {
-            if (!IndexWriter.WRITE_LOCK_NAME.equals(file)
-                && !IndexFileNames.OLD_SEGMENTS_GEN.equals(file)
-                && file.startsWith("extra") == false) {
-                assertTrue(
-                    file + " is not in the map: " + metadata.asMap().size() + " vs. " + store.directory().listAll().length,
-                    metadata.asMap().containsKey(file)
-                );
+            if (IndexWriter.WRITE_LOCK_NAME.equals(file) == false && file.startsWith("extra") == false) {
+                assertTrue(file + " is not in the map: " + metadata.asMap().size() + " vs. " +
+                    store.directory().listAll().length, metadata.asMap().containsKey(file));
             } else {
                 assertFalse(
                     file + " is not in the map: " + metadata.asMap().size() + " vs. " + store.directory().listAll().length,
