@@ -350,7 +350,6 @@ public class QueryPhase {
         if ((fieldType.typeName().equals("long") == false) && (fieldType instanceof DateFieldType == false)) return;
         if (fieldType.isSearchable() == false) return;
         if (fieldType.hasDocValues() == false) return;
-        sortField.setCanUsePoints();
     }
 
     /**

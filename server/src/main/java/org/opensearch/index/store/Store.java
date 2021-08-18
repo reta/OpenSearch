@@ -669,9 +669,7 @@ public class Store extends AbstractIndexShardComponent implements Closeable, Ref
                     directory.deleteFile(reason, existingFile);
                     // FNF should not happen since we hold a write lock?
                 } catch (IOException ex) {
-                    if (existingFile.startsWith(IndexFileNames.SEGMENTS)
-                        || existingFile.equals(IndexFileNames.OLD_SEGMENTS_GEN)
-                        || existingFile.startsWith(CORRUPTED_MARKER_NAME_PREFIX)) {
+                    if (existingFile.startsWith(IndexFileNames.SEGMENTS) || existingFile.startsWith(CORRUPTED_MARKER_NAME_PREFIX)) {
                         // TODO do we need to also fail this if we can't delete the pending commit file?
                         // if one of those files can't be deleted we better fail the cleanup otherwise we might leave an old commit
                         // point around?
@@ -1053,9 +1051,6 @@ public class Store extends AbstractIndexShardComponent implements Closeable, Ref
             final List<StoreFileMetadata> perCommitStoreFiles = new ArrayList<>();
 
             for (StoreFileMetadata meta : this) {
-                if (IndexFileNames.OLD_SEGMENTS_GEN.equals(meta.name())) { // legacy
-                    continue; // we don't need that file at all
-                }
                 final String segmentId = IndexFileNames.parseSegmentName(meta.name());
                 final String extension = IndexFileNames.getExtension(meta.name());
                 if (IndexFileNames.SEGMENTS.equals(segmentId)
@@ -1095,15 +1090,11 @@ public class Store extends AbstractIndexShardComponent implements Closeable, Ref
                 Collections.unmodifiableList(different),
                 Collections.unmodifiableList(missing)
             );
-            assert recoveryDiff.size() == this.metadata.size() - (metadata.containsKey(IndexFileNames.OLD_SEGMENTS_GEN)
-                ? 1
-                : 0) : "some files are missing recoveryDiff size: ["
-                    + recoveryDiff.size()
-                    + "] metadata size: ["
-                    + this.metadata.size()
-                    + "] contains  segments.gen: ["
-                    + metadata.containsKey(IndexFileNames.OLD_SEGMENTS_GEN)
-                    + "]";
+            assert recoveryDiff.size() == this.metadata.size() : "some files are missing recoveryDiff size: ["
+                + recoveryDiff.size()
+                + "] metadata size: ["
+                + this.metadata.size()
+                + "]";
             return recoveryDiff;
         }
 

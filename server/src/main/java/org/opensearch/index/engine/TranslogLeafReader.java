@@ -46,6 +46,8 @@ import org.apache.lucene.index.SortedNumericDocValues;
 import org.apache.lucene.index.SortedSetDocValues;
 import org.apache.lucene.index.StoredFieldVisitor;
 import org.apache.lucene.index.Terms;
+import org.apache.lucene.index.VectorValues;
+import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.BytesRef;
 import org.opensearch.common.util.set.Sets;
@@ -56,7 +58,6 @@ import org.opensearch.index.mapper.Uid;
 import org.opensearch.index.translog.Translog;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Set;
 
@@ -79,6 +80,8 @@ public final class TranslogLeafReader extends LeafReader {
         0,
         0,
         0,
+        0,
+        VectorValues.SimilarityFunction.NONE,
         false
     );
     private static final FieldInfo FAKE_ROUTING_FIELD = new FieldInfo(
@@ -94,6 +97,8 @@ public final class TranslogLeafReader extends LeafReader {
         0,
         0,
         0,
+        0,
+        VectorValues.SimilarityFunction.NONE,
         false
     );
     private static final FieldInfo FAKE_ID_FIELD = new FieldInfo(
@@ -109,6 +114,8 @@ public final class TranslogLeafReader extends LeafReader {
         0,
         0,
         0,
+        0,
+        VectorValues.SimilarityFunction.NONE,
         false
     );
     public static Set<String> ALL_FIELD_NAMES = Sets.newHashSet(FAKE_SOURCE_FIELD.name, FAKE_ROUTING_FIELD.name, FAKE_ID_FIELD.name);
@@ -208,7 +215,7 @@ public final class TranslogLeafReader extends LeafReader {
             visitor.binaryField(FAKE_SOURCE_FIELD, operation.source().toBytesRef().bytes);
         }
         if (operation.routing() != null && visitor.needsField(FAKE_ROUTING_FIELD) == StoredFieldVisitor.Status.YES) {
-            visitor.stringField(FAKE_ROUTING_FIELD, operation.routing().getBytes(StandardCharsets.UTF_8));
+            visitor.stringField(FAKE_ROUTING_FIELD, operation.routing());
         }
         if (visitor.needsField(FAKE_ID_FIELD) == StoredFieldVisitor.Status.YES) {
             BytesRef bytesRef = Uid.encodeId(operation.id());
@@ -226,5 +233,15 @@ public final class TranslogLeafReader extends LeafReader {
     @Override
     public CacheHelper getReaderCacheHelper() {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public VectorValues getVectorValues(String field) throws IOException {
+        return getVectorValues(field);
+    }
+
+    @Override
+    public TopDocs searchNearestVectors(String field, float[] target, int k, int fanout) throws IOException {
+        return searchNearestVectors(field, target, k, fanout);
     }
 }
