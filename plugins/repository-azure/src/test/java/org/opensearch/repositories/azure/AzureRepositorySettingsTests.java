@@ -32,7 +32,15 @@
 
 package org.opensearch.repositories.azure;
 
-import com.microsoft.azure.storage.LocationMode;
+import okhttp3.internal.concurrent.TaskRunner;
+import okio.AsyncTimeout;
+import reactor.core.scheduler.Schedulers;
+
+import com.carrotsearch.randomizedtesting.annotations.ThreadLeakLingering;
+
+import org.apache.commons.lang3.reflect.FieldUtils;
+import org.junit.After;
+import org.junit.AfterClass;
 import org.opensearch.cluster.metadata.RepositoryMetadata;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Settings;
@@ -44,12 +52,32 @@ import org.opensearch.indices.recovery.RecoverySettings;
 import org.opensearch.repositories.blobstore.BlobStoreTestUtil;
 import org.opensearch.test.OpenSearchTestCase;
 
+import java.util.concurrent.ExecutorService;
+
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.Mockito.mock;
 
+@ThreadLeakLingering(linger = 60000) // 1 minute lingering
 public class AzureRepositorySettingsTests extends OpenSearchTestCase {
-
+    @After
+    public void tearDown() throws Exception {
+        super.tearDown();
+        Schedulers.shutdownNow();
+    }
+    
+    @AfterClass
+    public static void shutdown() throws Exception {
+        final ExecutorService executor = (ExecutorService)FieldUtils.readDeclaredField(
+            TaskRunner.INSTANCE.getBackend(), "executor", true);
+        executor.shutdownNow();
+        
+        // See please: https://github.com/Azure/azure-sdk-for-java/issues/1387
+        synchronized (AsyncTimeout.class) {
+            AsyncTimeout.class.notifyAll();
+        }
+    }
+    
     private AzureRepository azureRepository(Settings settings) {
         Settings internalSettings = Settings.builder()
             .put(Environment.PATH_HOME_SETTING.getKey(), createTempDir().toAbsolutePath())

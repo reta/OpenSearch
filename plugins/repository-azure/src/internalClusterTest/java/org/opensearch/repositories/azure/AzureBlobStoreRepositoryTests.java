@@ -31,15 +31,21 @@
 
 package org.opensearch.repositories.azure;
 
-import com.microsoft.azure.storage.Constants;
-import com.microsoft.azure.storage.RetryExponentialRetry;
-import com.microsoft.azure.storage.RetryPolicyFactory;
-import com.microsoft.azure.storage.blob.BlobRequestOptions;
+import com.azure.storage.blob.models.ParallelTransferOptions;
+import com.azure.storage.common.implementation.Constants;
+import com.azure.storage.common.policy.RequestRetryOptions;
+import com.azure.storage.common.policy.RetryPolicyType;
+import com.carrotsearch.randomizedtesting.annotations.ThreadLeakLingering;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import fixture.azure.AzureHttpHandler;
+import okhttp3.internal.concurrent.TaskRunner;
+import okio.AsyncTimeout;
+import reactor.core.scheduler.Schedulers;
 
+import org.apache.commons.lang3.reflect.FieldUtils;
+import org.junit.AfterClass;
 import org.opensearch.common.SuppressForbidden;
 import org.opensearch.common.regex.Regex;
 import org.opensearch.common.settings.MockSecureSettings;
@@ -55,11 +61,26 @@ import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.regex.Pattern;
 
+@ThreadLeakLingering(linger = 60000) // 1 minute lingering
 @SuppressForbidden(reason = "this test uses a HttpServer to emulate an Azure endpoint")
 public class AzureBlobStoreRepositoryTests extends OpenSearchMockAPIBasedRepositoryIntegTestCase {
-
+    @AfterClass
+    public static void shutdown() throws Exception {
+        Schedulers.shutdownNow();
+        
+        final ExecutorService executor = (ExecutorService)FieldUtils.readDeclaredField(
+            TaskRunner.INSTANCE.getBackend(), "executor", true);
+        executor.shutdownNow();
+        
+        // See please: https://github.com/Azure/azure-sdk-for-java/issues/1387
+        synchronized (AsyncTimeout.class) {
+            AsyncTimeout.class.notifyAll();
+        }
+    }
+    
     @Override
     protected String repositoryType() {
         return AzureRepository.TYPE;
@@ -96,7 +117,7 @@ public class AzureBlobStoreRepositoryTests extends OpenSearchMockAPIBasedReposit
         secureSettings.setString(AzureStorageSettings.ACCOUNT_SETTING.getConcreteSettingForNamespace("test").getKey(), "account");
         secureSettings.setString(AzureStorageSettings.KEY_SETTING.getConcreteSettingForNamespace("test").getKey(), key);
 
-        final String endpoint = "ignored;DefaultEndpointsProtocol=http;BlobEndpoint=" + httpServerUrl();
+        final String endpoint = "ignored;DefaultEndpointsProtocol=http;BlobEndpoint=" + httpServerUrl() + "/";
         return Settings.builder()
             .put(super.nodeSettings(nodeOrdinal))
             .put(AzureStorageSettings.ENDPOINT_SUFFIX_SETTING.getConcreteSettingForNamespace("test").getKey(), endpoint)
@@ -118,15 +139,14 @@ public class AzureBlobStoreRepositoryTests extends OpenSearchMockAPIBasedReposit
         AzureStorageService createAzureStoreService(final Settings settings) {
             return new AzureStorageService(settings) {
                 @Override
-                RetryPolicyFactory createRetryPolicy(final AzureStorageSettings azureStorageSettings) {
-                    return new RetryExponentialRetry(1, 100, 500, azureStorageSettings.getMaxRetries());
+                RequestRetryOptions createRetryPolicy(final AzureStorageSettings azureStorageSettings, String secondaryHost) {
+                    return new RequestRetryOptions(RetryPolicyType.EXPONENTIAL, azureStorageSettings.getMaxRetries(),
+                        1, 100L, 500L, secondaryHost);
                 }
-
+                
                 @Override
-                BlobRequestOptions getBlobRequestOptionsForWriteBlob() {
-                    BlobRequestOptions options = new BlobRequestOptions();
-                    options.setSingleBlobPutThresholdInBytes(Math.toIntExact(ByteSizeUnit.MB.toBytes(1)));
-                    return options;
+                ParallelTransferOptions getBlobRequestOptionsForWriteBlob() {
+                    return new ParallelTransferOptions().setMaxSingleUploadSizeLong(ByteSizeUnit.MB.toBytes(1));
                 }
             };
         }
@@ -165,11 +185,8 @@ public class AzureBlobStoreRepositoryTests extends OpenSearchMockAPIBasedReposit
 
         @Override
         protected String requestUniqueId(final HttpExchange exchange) {
-            final String requestId = exchange.getRequestHeaders().getFirst(Constants.HeaderConstants.CLIENT_REQUEST_ID_HEADER);
-            final String range = exchange.getRequestHeaders().getFirst(Constants.HeaderConstants.STORAGE_RANGE_HEADER);
-            return exchange.getRequestMethod()
-                + " " + requestId
-                + (range != null ? " " + range : "");
+            final String requestId = exchange.getRequestHeaders().getFirst(Constants.HeaderConstants.CLIENT_REQUEST_ID);
+            return exchange.getRequestMethod() + " " + requestId;
         }
     }
 
@@ -180,6 +197,7 @@ public class AzureBlobStoreRepositoryTests extends OpenSearchMockAPIBasedReposit
     private static class AzureHTTPStatsCollectorHandler extends HttpStatsCollectorHandler {
 
         private static final Pattern listPattern = Pattern.compile("GET /[a-zA-Z0-9]+\\??.+");
+        private static final Pattern getPattern = Pattern.compile("GET /[^?/]+/[^?/]+\\??.*");
 
         private AzureHTTPStatsCollectorHandler(HttpHandler delegate) {
             super(delegate);
@@ -187,7 +205,7 @@ public class AzureBlobStoreRepositoryTests extends OpenSearchMockAPIBasedReposit
 
         @Override
         protected void maybeTrack(String request, Headers headers) {
-            if (Regex.simpleMatch("GET /*/*", request)) {
+            if (getPattern.matcher(request).matches()) {
                 trackRequest("GetBlob");
             } else if (Regex.simpleMatch("HEAD /*/*", request)) {
                 trackRequest("GetBlobProperties");

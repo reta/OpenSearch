@@ -32,14 +32,31 @@
 
 package org.opensearch.repositories.azure;
 
-import com.microsoft.azure.storage.CloudStorageAccount;
-import com.microsoft.azure.storage.Constants;
-import com.microsoft.azure.storage.OperationContext;
-import com.microsoft.azure.storage.RetryPolicy;
-import com.microsoft.azure.storage.RetryPolicyFactory;
-import com.microsoft.azure.storage.RetryExponentialRetry;
-import com.microsoft.azure.storage.blob.BlobRequestOptions;
-import com.microsoft.azure.storage.blob.CloudBlobClient;
+import okhttp3.Dispatcher;
+import reactor.core.publisher.Mono;
+
+import com.azure.core.http.HttpClient;
+import com.azure.core.http.HttpPipelineCallContext;
+import com.azure.core.http.HttpPipelineNextPolicy;
+import com.azure.core.http.HttpPipelinePosition;
+import com.azure.core.http.HttpRequest;
+import com.azure.core.http.HttpResponse;
+import com.azure.core.http.ProxyOptions;
+import com.azure.core.http.ProxyOptions.Type;
+import com.azure.core.http.okhttp.OkHttpAsyncHttpClientBuilder;
+import com.azure.core.http.policy.HttpPipelinePolicy;
+import com.azure.core.util.Context;
+import com.azure.core.util.logging.ClientLogger;
+import com.azure.storage.blob.BlobServiceClient;
+import com.azure.storage.blob.BlobServiceClientBuilder;
+import com.azure.storage.blob.models.ParallelTransferOptions;
+import com.azure.storage.blob.specialized.BlockBlobAsyncClient;
+import com.azure.storage.common.implementation.connectionstring.StorageConnectionString;
+import com.azure.storage.common.implementation.connectionstring.StorageEndpoint;
+import com.azure.storage.common.policy.RequestRetryOptions;
+import com.azure.storage.common.policy.RetryPolicyType;
+
+import org.opensearch.common.SuppressForbidden;
 import org.opensearch.common.collect.MapBuilder;
 import org.opensearch.common.collect.Tuple;
 import org.opensearch.common.settings.Settings;
@@ -47,82 +64,197 @@ import org.opensearch.common.settings.SettingsException;
 import org.opensearch.common.unit.ByteSizeUnit;
 import org.opensearch.common.unit.ByteSizeValue;
 
-import java.net.URI;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.net.URISyntaxException;
+import java.security.AccessController;
 import java.security.InvalidKeyException;
+import java.security.PrivilegedAction;
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 import static java.util.Collections.emptyMap;
 
-public class AzureStorageService {
-
+public class AzureStorageService implements AutoCloseable {
+    private final ClientLogger logger = new ClientLogger(AzureStorageService.class);
+    
+    /**
+     * Maximum blob's block size size
+     */
     public static final ByteSizeValue MIN_CHUNK_SIZE = new ByteSizeValue(1, ByteSizeUnit.BYTES);
 
     /**
-     * Maximum allowed blob size in Azure blob store.
+     * Maximum allowed blob's block size in Azure blob store.
      */
-    public static final ByteSizeValue MAX_CHUNK_SIZE = new ByteSizeValue(Constants.MAX_BLOB_SIZE, ByteSizeUnit.BYTES);
+    public static final ByteSizeValue MAX_CHUNK_SIZE = new ByteSizeValue(BlockBlobAsyncClient.MAX_STAGE_BLOCK_BYTES_LONG, 
+        ByteSizeUnit.BYTES);
 
     // 'package' for testing
     volatile Map<String, AzureStorageSettings> storageSettings = emptyMap();
+    private final Map<AzureStorageSettings, ClientState> clients = new ConcurrentHashMap<>();
 
     public AzureStorageService(Settings settings) {
         // eagerly load client settings so that secure settings are read
         final Map<String, AzureStorageSettings> clientsSettings = AzureStorageSettings.load(settings);
         refreshAndClearCache(clientsSettings);
     }
+    
+    /**
+     * Obtains a {@code BlobServiceClient} on each invocation using the current client
+     * settings. BlobServiceClient is thread safe and and could be cached but the settings 
+     * can change, therefore the instance might be recreated from scratch.
+     * 
+     * @param clientName client name
+     * @return the {@code BlobServiceClient} instance and context
+     */
+    public Tuple<BlobServiceClient, Supplier<Context>> client(String clientName) {
+        return client(clientName, (request, response) -> {});
+        
+    }
 
     /**
-     * Creates a {@code CloudBlobClient} on each invocation using the current client
-     * settings. CloudBlobClient is not thread safe and the settings can change,
-     * therefore the instance is not cache-able and should only be reused inside a
-     * thread for logically coupled ops. The {@code OperationContext} is used to
-     * specify the proxy, but a new context is *required* for each call.
+     * Obtains a {@code BlobServiceClient} on each invocation using the current client
+     * settings. BlobServiceClient is thread safe and and could be cached but the settings 
+     * can change, therefore the instance might be recreated from scratch.
+     
+     * @param clientName client name
+     * @param statsCollector statistics collector
+     * @return the {@code BlobServiceClient} instance and context
      */
-    public Tuple<CloudBlobClient, Supplier<OperationContext>> client(String clientName) {
+    public Tuple<BlobServiceClient, Supplier<Context>> client(String clientName, BiConsumer<HttpRequest, HttpResponse> statsCollector) {
         final AzureStorageSettings azureStorageSettings = this.storageSettings.get(clientName);
         if (azureStorageSettings == null) {
             throw new SettingsException("Unable to find client with name [" + clientName + "]");
         }
-        try {
-            return new Tuple<>(buildClient(azureStorageSettings), () -> buildOperationContext(azureStorageSettings));
-        } catch (InvalidKeyException | URISyntaxException | IllegalArgumentException e) {
-            throw new SettingsException("Invalid azure client settings with name [" + clientName + "]", e);
+
+        // New Azure storage clients are thread-safe and do not hold any state so could be cached, see please: 
+        // https://github.com/Azure/azure-storage-java/blob/master/V12%20Upgrade%20Story.md#v12-the-best-of-both-worlds
+        ClientState client = clients.get(azureStorageSettings);
+        
+        if (client == null) {
+            client = clients.computeIfAbsent(azureStorageSettings, key -> {
+                try {
+                    return buildClient(azureStorageSettings, statsCollector);
+                } catch (InvalidKeyException | URISyntaxException | IllegalArgumentException e) {
+                    throw new SettingsException("Invalid azure client settings with name [" + clientName + "]", e);
+                } catch (Throwable ex) {
+                    throw new RuntimeException("Unexpected azure client initialization exception", ex);
+                }
+            });
         }
+        
+        return new Tuple<>(client.getClient(), () -> buildOperationContext(azureStorageSettings));
     }
 
-    private CloudBlobClient buildClient(AzureStorageSettings azureStorageSettings) throws InvalidKeyException, URISyntaxException {
-        final CloudBlobClient client = createClient(azureStorageSettings);
-        // Set timeout option if the user sets cloud.azure.storage.timeout or
-        // cloud.azure.storage.xxx.timeout (it's negative by default)
-        final long timeout = azureStorageSettings.getTimeout().getMillis();
-        if (timeout > 0) {
-            if (timeout > Integer.MAX_VALUE) {
-                throw new IllegalArgumentException("Timeout [" + azureStorageSettings.getTimeout() + "] exceeds 2,147,483,647ms.");
-            }
-            client.getDefaultRequestOptions().setTimeoutIntervalInMs((int) timeout);
+    @SuppressForbidden(reason = "OkHttp dedicated dispatcher") 
+    private ClientState buildClient(AzureStorageSettings azureStorageSettings, BiConsumer<HttpRequest, HttpResponse> statsCollector)
+            throws Throwable {
+        
+        final BlobServiceClientBuilder builder = createClientBuilder(azureStorageSettings);
+        
+        // See please OkHttp3 client, dedicated pool is required to deal with SecurityManager
+        final ExecutorService executor = new ThreadPoolExecutor(0, Integer.MAX_VALUE, 60, TimeUnit.SECONDS,
+            new SynchronousQueue<>(), new HttpThreadFactory());
+
+        final OkHttpAsyncHttpClientBuilder clientBuilder = new OkHttpAsyncHttpClientBuilder()
+            .dispatcher(new Dispatcher(executor));
+
+        final Proxy proxy = azureStorageSettings.getProxy();
+        if (proxy != null) {
+            final Type type = Arrays
+                .stream(Type.values())
+                .filter(t -> t.toProxyType().equals(proxy.type()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Unsupported proxy type: " + proxy.type()));
+
+            clientBuilder.proxy(new ProxyOptions(type, (InetSocketAddress)proxy.address()));
         }
+
+        // Needs priviledged access in order to check the proxy configuration
+        final HttpClient httpClient = SocketAccess.doPrivilegedThrowable(
+            () ->  clientBuilder.build());
+        
         // We define a default exponential retry policy
-        client.getDefaultRequestOptions().setRetryPolicyFactory(createRetryPolicy(azureStorageSettings));
-        client.getDefaultRequestOptions().setLocationMode(azureStorageSettings.getLocationMode());
-        return client;
+        return new ClientState(
+            applyLocationMode(builder, azureStorageSettings)
+                .httpClient(httpClient)
+                .addPolicy(new HttpStatsPolicy(statsCollector))
+                .buildClient(), 
+            executor);
+    }
+    
+    /**
+     * The location mode is not there in v12 APIs anymore but it is possible to mimic its semantics using 
+     * retry options and combination of primary / secondary endpoints. Refer to migration guide for mode details:
+     * https://github.com/Azure/azure-sdk-for-java/blob/main/sdk/storage/azure-storage-blob/migrationGuides/V8_V12.md#miscellaneous
+     */
+    private BlobServiceClientBuilder applyLocationMode(final BlobServiceClientBuilder builder, final AzureStorageSettings settings) {
+        final StorageConnectionString storageConnectionString = StorageConnectionString.create(settings.getConnectString(), logger);
+        final StorageEndpoint endpoint = storageConnectionString.getBlobEndpoint();
+        
+        if (endpoint == null || endpoint.getPrimaryUri() == null) {
+            throw new IllegalArgumentException("connectionString missing required settings to derive blob service primary endpoint.");
+        }
+
+        final LocationMode locationMode = settings.getLocationMode();
+        if (locationMode == LocationMode.PRIMARY_ONLY) {
+            builder.retryOptions(createRetryPolicy(settings, null));
+        } else if (locationMode == LocationMode.SECONDARY_ONLY) {
+            if (endpoint.getSecondaryUri() == null) {
+                throw new IllegalArgumentException("connectionString missing required settings to derive blob service secondary endpoint.");
+            }
+            
+            builder
+                .endpoint(endpoint.getSecondaryUri())
+                .retryOptions(createRetryPolicy(settings, null));
+        } else if (locationMode == LocationMode.PRIMARY_THEN_SECONDARY) {
+            builder.retryOptions(createRetryPolicy(settings, endpoint.getSecondaryUri()));
+        } else if (locationMode == LocationMode.SECONDARY_THEN_PRIMARY) {
+            if (endpoint.getSecondaryUri() == null) {
+                throw new IllegalArgumentException("connectionString missing required settings to derive blob service secondary endpoint.");
+            }
+            
+            builder
+                .endpoint(endpoint.getSecondaryUri())
+                .retryOptions(createRetryPolicy(settings, endpoint.getPrimaryUri()));
+        } else {
+            throw new IllegalArgumentException("Unsupported location mode: " + locationMode);
+        }
+        
+        return builder;
+    }
+
+    private static BlobServiceClientBuilder createClientBuilder(AzureStorageSettings settings) 
+            throws InvalidKeyException, URISyntaxException {
+        return new BlobServiceClientBuilder().connectionString(settings.getConnectString());
+    }
+
+    /**
+     * For the time being, create an empty context but the implementation could be extended.
+     * @param azureStorageSettings azure seetings
+     * @return context instance
+     */
+    private static Context buildOperationContext(AzureStorageSettings azureStorageSettings) {
+        return Context.NONE;
     }
 
     // non-static, package private for testing
-    RetryPolicyFactory createRetryPolicy(final AzureStorageSettings azureStorageSettings) {
-        return new RetryExponentialRetry(RetryPolicy.DEFAULT_CLIENT_BACKOFF, azureStorageSettings.getMaxRetries());
-    }
-
-    private static CloudBlobClient createClient(AzureStorageSettings azureStorageSettings) throws InvalidKeyException, URISyntaxException {
-        final String connectionString = azureStorageSettings.getConnectString();
-        return CloudStorageAccount.parse(connectionString).createCloudBlobClient();
-    }
-
-    private static OperationContext buildOperationContext(AzureStorageSettings azureStorageSettings) {
-        final OperationContext context = new OperationContext();
-        context.setProxy(azureStorageSettings.getProxy());
-        return context;
+    RequestRetryOptions createRetryPolicy(final AzureStorageSettings azureStorageSettings, String secondaryHost) {
+        // We define a default exponential retry policy{
+        return new RequestRetryOptions(RetryPolicyType.EXPONENTIAL, azureStorageSettings.getMaxRetries(),
+            (Integer)null, null, null, secondaryHost);
     }
 
     /**
@@ -134,31 +266,145 @@ public class AzureStorageService {
      */
     public Map<String, AzureStorageSettings> refreshAndClearCache(Map<String, AzureStorageSettings> clientsSettings) {
         final Map<String, AzureStorageSettings> prevSettings = this.storageSettings;
+        final Map<AzureStorageSettings, ClientState> prevClients = new HashMap<>(this.clients);
+        prevClients.values().forEach(this::close);
+        prevClients.clear();
+        
         this.storageSettings = MapBuilder.newMapBuilder(clientsSettings).immutableMap();
+        this.clients.clear();
+
         // clients are built lazily by {@link client(String)}
         return prevSettings;
     }
 
-    /**
-     * Extract the blob name from a URI like https://myservice.azure.net/container/path/to/myfile
-     * It should remove the container part (first part of the path) and gives path/to/myfile
-     * @param uri URI to parse
-     * @return The blob name relative to the container
-     */
-    static String blobNameFromUri(URI uri) {
-        final String path = uri.getPath();
-        // We remove the container name from the path
-        // The 3 magic number cames from the fact if path is /container/path/to/myfile
-        // First occurrence is empty "/"
-        // Second occurrence is "container
-        // Last part contains "path/to/myfile" which is what we want to get
-        final String[] splits = path.split("/", 3);
-        // We return the remaining end of the string
-        return splits[2];
+    @Override
+    public void close() {
+        this.clients.values().forEach(this::close);
+        this.clients.clear();
     }
 
-    // package private for testing
-    BlobRequestOptions getBlobRequestOptionsForWriteBlob() {
+    public Duration getBlobRequestTimeout(String clientName) {
+        final AzureStorageSettings azureStorageSettings = this.storageSettings.get(clientName);
+        if (azureStorageSettings == null) {
+            throw new SettingsException("Unable to find client with name [" + clientName + "]");
+        }
+        
+        // Set timeout option if the user sets cloud.azure.storage.timeout or
+        // cloud.azure.storage.xxx.timeout (it's negative by default)
+        final long timeout = azureStorageSettings.getTimeout().getMillis();
+        
+        if (timeout > 0) {
+            if (timeout > Integer.MAX_VALUE) {
+                throw new IllegalArgumentException("Timeout [" + azureStorageSettings.getTimeout() + "] exceeds 2,147,483,647ms.");
+            }
+            
+            return Duration.ofMillis(timeout);
+        }
+        
         return null;
     }
+    
+    ParallelTransferOptions getBlobRequestOptionsForWriteBlob() {
+        return null;
+    }
+
+    private void close(ClientState client) {
+        final ExecutorService executor = client.getExecutor();
+        
+        executor.shutdown(); 
+        try {
+            // The wait time could be configurable but using the hardcoded value for now
+            if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+                logger.warning("Unable to gracefully shutdown HTTP executor within 60 seconds");
+            }
+        } catch (final InterruptedException ex) {
+            executor.shutdownNow();
+        }
+    }
+    
+    /**
+     * Implements HTTP pipeline policy to collect statistics on API calls. See please:
+     * https://github.com/Azure/azure-sdk-for-java/blob/main/sdk/storage/azure-storage-blob/migrationGuides/V8_V12.md#miscellaneous
+     */
+    private static class HttpStatsPolicy implements HttpPipelinePolicy {
+        private final BiConsumer<HttpRequest, HttpResponse> statsCollector;
+        
+        HttpStatsPolicy(final BiConsumer<HttpRequest, HttpResponse> statsCollector) {
+            this.statsCollector = statsCollector;
+        }
+
+        @Override
+        public Mono<HttpResponse> process(HttpPipelineCallContext httpPipelineCallContext, HttpPipelineNextPolicy httpPipelineNextPolicy) {
+            final HttpRequest request = httpPipelineCallContext.getHttpRequest();
+            return httpPipelineNextPolicy
+                .process()
+                .doOnNext(response -> statsCollector.accept(request, response));
+        }
+
+        @Override
+        public HttpPipelinePosition getPipelinePosition() {
+            // This policy must be in a position to see each retry
+            return HttpPipelinePosition.PER_RETRY;
+        }
+    }
+    
+    /**
+     * Helper class to hold the state of the cached clients and associated event groups to support
+     * graceful shutdown logic.
+     */
+    private static class ClientState {
+        private final BlobServiceClient client;
+        private final ExecutorService executor;
+        
+        ClientState(final BlobServiceClient client, final ExecutorService executor) {
+            this.client = client;
+            this.executor = executor;
+        }
+        
+        public BlobServiceClient getClient() {
+            return client;
+        }
+        
+        public ExecutorService getExecutor() {
+            return executor;
+        }
+    }
+    
+    /**
+     * The HTTP thread factory
+     */
+    private static class HttpThreadFactory implements ThreadFactory {
+        private static final AtomicInteger poolNumber = new AtomicInteger(1);
+        private final ThreadGroup group;
+        private final AtomicInteger threadNumber = new AtomicInteger(1);
+        private final String namePrefix;
+
+        HttpThreadFactory() {
+            SecurityManager s = Objects.requireNonNull(System.getSecurityManager());
+            group = (s != null) ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
+            namePrefix = "okhttp3-dispatcher-" + poolNumber.getAndIncrement() + "-thread-";
+        }
+
+        public Thread newThread(Runnable r) {
+            // See please: https://github.com/Azure/azure-sdk-for-java/pull/24374
+            final Runnable priviledged = () -> {
+                AccessController.doPrivileged((PrivilegedAction<?>) () -> {
+                    r.run();
+                    return null;
+                });
+            };
+            final Thread t = new Thread(group, priviledged, namePrefix + threadNumber.getAndIncrement(), 0);
+            
+            if (t.isDaemon()) {
+                t.setDaemon(false);
+            }
+            
+            if (t.getPriority() != Thread.NORM_PRIORITY) {
+                t.setPriority(Thread.NORM_PRIORITY);
+            }
+            
+            return t;
+        }
+    }
+
 }
