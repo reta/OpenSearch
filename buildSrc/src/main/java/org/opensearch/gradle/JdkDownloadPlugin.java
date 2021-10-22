@@ -32,7 +32,10 @@
 
 package org.opensearch.gradle;
 
+import org.opensearch.gradle.OpenSearchDistribution.Platform;
+import org.opensearch.gradle.transform.SymbolicLinkDisregardingUntarTransform;
 import org.opensearch.gradle.transform.SymbolicLinkPreservingUntarTransform;
+import org.opensearch.gradle.transform.UnpackTransform;
 import org.opensearch.gradle.transform.UnzipTransform;
 import org.gradle.api.GradleException;
 import org.gradle.api.NamedDomainObjectContainer;
@@ -70,7 +73,11 @@ public class JdkDownloadPlugin implements Plugin<Project> {
         });
 
         ArtifactTypeDefinition tarArtifactTypeDefinition = project.getDependencies().getArtifactTypes().maybeCreate("tar.gz");
-        project.getDependencies().registerTransform(SymbolicLinkPreservingUntarTransform.class, transformSpec -> {
+        final Class<? extends UnpackTransform> transformClass = (OpenSearchDistribution.CURRENT_PLATFORM == Platform.WINDOWS)
+            ? SymbolicLinkDisregardingUntarTransform.class
+            : SymbolicLinkPreservingUntarTransform.class;
+
+        project.getDependencies().registerTransform(transformClass, transformSpec -> {
             transformSpec.getFrom()
                 .attribute(ArtifactAttributes.ARTIFACT_FORMAT, tarArtifactTypeDefinition.getName())
                 .attribute(jdkAttribute, true);
