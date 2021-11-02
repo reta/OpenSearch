@@ -500,6 +500,7 @@ public final class ClusterSettings extends AbstractScopedSettings {
                 MultiBucketConsumerService.MAX_BUCKET_SETTING,
                 SearchService.LOW_LEVEL_CANCELLATION_SETTING,
                 SearchService.MAX_OPEN_SCROLL_CONTEXT,
+                SearchService.ALLOW_CONCURRENT_SEGMENT_SEARCH_SETTING,
                 Node.WRITE_PORTS_FILE_SETTING,
                 Node.NODE_NAME_SETTING,
                 Node.NODE_ATTRIBUTES,

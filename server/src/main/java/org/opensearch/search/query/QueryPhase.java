@@ -78,6 +78,7 @@ import org.opensearch.search.internal.SearchContext;
 import org.opensearch.search.profile.ProfileShardResult;
 import org.opensearch.search.profile.SearchProfileShardResults;
 import org.opensearch.search.profile.query.InternalProfileCollector;
+import org.opensearch.search.profile.query.ProfileCollectorManager;
 import org.opensearch.search.rescore.RescorePhase;
 import org.opensearch.search.sort.SortAndFormats;
 import org.opensearch.search.suggest.SuggestPhase;
@@ -239,9 +240,9 @@ public class QueryPhase {
                 // this collector can filter documents during the collection
                 hasFilterCollector = true;
             }
-            if (searchContext.queryCollectors().isEmpty() == false) {
+            if (searchContext.queryCollectorManagers().isEmpty() == false) {
                 // plug in additional collectors, like aggregations
-                collectors.add(createMultiCollectorContext(searchContext.queryCollectors().values()));
+                collectors.add(createMultiCollectorContext(searchContext.queryCollectorManagers().values()));
             }
             if (searchContext.minimumScore() != null) {
                 // apply the minimum score after multi collector so we filter aggs as well
@@ -305,7 +306,32 @@ public class QueryPhase {
                 if (sortAndFormatsForRewrittenNumericSort != null && collectors.size() == 0 && searchContext.getProfilers() == null) {
                     shouldRescore = searchWithCollectorManager(searchContext, searcher, query, leafSorter, timeoutSet);
                 } else {
-                    shouldRescore = searchWithCollector(searchContext, searcher, query, collectors, hasFilterCollector, timeoutSet);
+                    boolean couldUseConcurrentSegmentSearch = searcher.allowConcurrentSegmentSearch();
+
+                    // TODO: support aggregations
+                    if (searchContext.aggregations() != null) {
+                        couldUseConcurrentSegmentSearch = false;
+                        if (LOGGER.isDebugEnabled()) {
+                            LOGGER.debug("Unable to use concurrent search over index segments (experimental): aggregations are present");
+                        }
+                    }
+
+                    if (couldUseConcurrentSegmentSearch) {
+                        if (LOGGER.isDebugEnabled()) {
+                            LOGGER.debug("Using concurrent search over index segments (experimental)");
+                        }
+
+                        shouldRescore = searchWithCollectorManager(
+                            searchContext,
+                            searcher,
+                            query,
+                            collectors,
+                            hasFilterCollector,
+                            timeoutSet
+                        );
+                    } else {
+                        shouldRescore = searchWithCollector(searchContext, searcher, query, collectors, hasFilterCollector, timeoutSet);
+                    }
                 }
 
                 // if we rewrote numeric long or date sort, restore fieldDocs based on the original sort
@@ -376,6 +402,57 @@ public class QueryPhase {
         return topDocsFactory.shouldRescore();
     }
 
+    private static boolean searchWithCollectorManager(
+        SearchContext searchContext,
+        ContextIndexSearcher searcher,
+        Query query,
+        LinkedList<QueryCollectorContext> collectorContexts,
+        boolean hasFilterCollector,
+        boolean timeoutSet
+    ) throws IOException {
+        // create the top docs collector last when the other collectors are known
+        final TopDocsCollectorContext topDocsFactory = createTopDocsCollectorContext(searchContext, hasFilterCollector);
+        // add the top docs collector, the first collector context in the chain
+        collectorContexts.addFirst(topDocsFactory);
+
+        final QuerySearchResult queryResult = searchContext.queryResult();
+        CollectorManager<?, ReduceableSearchResult> collectorManager;
+
+        // TODO: support aggregations in concurrent segment search flow
+        if (searchContext.aggregations() != null) {
+            throw new UnsupportedOperationException("The concurrent segment search does not support aggregations yet");
+        }
+
+        if (searchContext.getProfilers() != null) {
+            final ProfileCollectorManager<? extends Collector, ReduceableSearchResult> profileCollectorManager =
+                QueryCollectorManagerContext.createQueryCollectorManagerWithProfiler(collectorContexts);
+            searchContext.getProfilers().getCurrentQueryProfiler().setCollector(profileCollectorManager);
+            collectorManager = profileCollectorManager;
+        } else {
+            // Create multi collector manager instance
+            collectorManager = QueryCollectorManagerContext.createMultiCollectorManager(collectorContexts);
+        }
+
+        try {
+            final ReduceableSearchResult result = searcher.search(query, collectorManager);
+            result.reduce(queryResult);
+        } catch (EarlyTerminatingCollector.EarlyTerminationException e) {
+            queryResult.terminatedEarly(true);
+        } catch (TimeExceededException e) {
+            assert timeoutSet : "TimeExceededException thrown even though timeout wasn't set";
+            if (searchContext.request().allowPartialSearchResults() == false) {
+                // Can't rethrow TimeExceededException because not serializable
+                throw new QueryPhaseExecutionException(searchContext.shardTarget(), "Time exceeded");
+            }
+            queryResult.searchTimedOut(true);
+        }
+        if (searchContext.terminateAfter() != SearchContext.DEFAULT_TERMINATE_AFTER && queryResult.terminatedEarly() == null) {
+            queryResult.terminatedEarly(false);
+        }
+
+        return topDocsFactory.shouldRescore();
+    }
+
     /*
      * We use collectorManager during sort optimization, where
      * we have already checked that there are no other collectors, no filters,
@@ -416,11 +493,16 @@ public class QueryPhase {
             totalHitsThreshold
         );
 
-        List<LeafReaderContext> leaves = new ArrayList<>(searcher.getIndexReader().leaves());
-        leafSorter.accept(leaves);
         try {
-            Weight weight = searcher.createWeight(searcher.rewrite(query), ScoreMode.TOP_SCORES, 1f);
-            searcher.search(leaves, weight, sharedManager, searchContext.queryResult(), sortAndFormats.formats, totalHits);
+            if (searcher.allowConcurrentSegmentSearch()) {
+                searcher.search(query, sharedManager, searchContext.queryResult(), sortAndFormats.formats, totalHits);
+            } else {
+                final List<LeafReaderContext> leaves = new ArrayList<>(searcher.getIndexReader().leaves());
+                leafSorter.accept(leaves);
+
+                final Weight weight = searcher.createWeight(searcher.rewrite(query), ScoreMode.TOP_SCORES, 1f);
+                searcher.search(leaves, weight, sharedManager, searchContext.queryResult(), sortAndFormats.formats, totalHits);
+            }
         } catch (TimeExceededException e) {
             assert timeoutSet : "TimeExceededException thrown even though timeout wasn't set";
             if (searchContext.request().allowPartialSearchResults() == false) {

@@ -213,6 +213,14 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         Property.NodeScope
     );
 
+    // Experimental support for concurrent search over Apache Lucene segments
+    public static final Setting<Boolean> ALLOW_CONCURRENT_SEGMENT_SEARCH_SETTING = Setting.boolSetting(
+        "search.allow_concurrent_segment_search",
+        false,
+        Property.Dynamic,
+        Setting.Property.NodeScope
+    );
+
     public static final int DEFAULT_SIZE = 10;
     public static final int DEFAULT_FROM = 0;
 
@@ -245,6 +253,8 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
     private volatile boolean lowLevelCancellation;
 
     private volatile int maxOpenScrollContext;
+
+    private volatile boolean allowConcurrentSegmentSearch;
 
     private final Cancellable keepAliveReaper;
 
@@ -302,6 +312,10 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
 
         lowLevelCancellation = LOW_LEVEL_CANCELLATION_SETTING.get(settings);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(LOW_LEVEL_CANCELLATION_SETTING, this::setLowLevelCancellation);
+
+        allowConcurrentSegmentSearch = ALLOW_CONCURRENT_SEGMENT_SEARCH_SETTING.get(settings);
+        clusterService.getClusterSettings()
+            .addSettingsUpdateConsumer(ALLOW_CONCURRENT_SEGMENT_SEARCH_SETTING, this::setAllowConcurrentSegmentSearch);
     }
 
     private void validateKeepAlives(TimeValue defaultKeepAlive, TimeValue maxKeepAlive) {
@@ -346,6 +360,10 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
 
     private void setLowLevelCancellation(Boolean lowLevelCancellation) {
         this.lowLevelCancellation = lowLevelCancellation;
+    }
+
+    private void setAllowConcurrentSegmentSearch(Boolean allowConcurrentSegmentSearch) {
+        this.allowConcurrentSegmentSearch = allowConcurrentSegmentSearch;
     }
 
     @Override
@@ -875,7 +893,8 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
                 timeout,
                 fetchPhase,
                 lowLevelCancellation,
-                clusterService.state().nodes().getMinNodeVersion()
+                clusterService.state().nodes().getMinNodeVersion(),
+                allowConcurrentSegmentSearch ? threadPool.executor(ThreadPool.Names.INDEX_SEARCHER) : null
             );
             // we clone the query shard context here just for rewriting otherwise we
             // might end up with incorrect state since we are using now() or script services
