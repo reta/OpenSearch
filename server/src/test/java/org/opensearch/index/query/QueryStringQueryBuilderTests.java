@@ -95,7 +95,6 @@ import static org.opensearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.opensearch.index.query.AbstractQueryBuilder.parseInnerQueryBuilder;
 import static org.opensearch.index.query.QueryBuilders.queryStringQuery;
 import static org.opensearch.test.hamcrest.OpenSearchAssertions.assertBooleanSubQuery;
-import static org.opensearch.test.hamcrest.OpenSearchAssertions.assertDisjunctionSubQuery;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.Matchers.containsString;
@@ -502,29 +501,29 @@ public class QueryStringQueryBuilderTests extends AbstractQueryTestCase<QueryStr
     }
 
     public void testToQueryMultipleFieldsBooleanQuery() throws Exception {
-        Query query = queryStringQuery("test").field(TEXT_FIELD_NAME)
-            .field(KEYWORD_FIELD_NAME)
-            .toQuery(createShardContext());
-        Query expected = new DisjunctionMaxQuery(List.of(
-            new TermQuery(new Term(TEXT_FIELD_NAME, "test")),
-            new TermQuery(new Term(KEYWORD_FIELD_NAME, "test"))), 1);
+        Query query = queryStringQuery("test").field(TEXT_FIELD_NAME).field(KEYWORD_FIELD_NAME).toQuery(createShardContext());
+        Query expected = new DisjunctionMaxQuery(
+            List.of(new TermQuery(new Term(TEXT_FIELD_NAME, "test")), new TermQuery(new Term(KEYWORD_FIELD_NAME, "test"))),
+            1
+        );
         assertEquals(expected, query);
     }
 
     public void testToQueryMultipleFieldsDisMaxQuery() throws Exception {
-        Query query = queryStringQuery("test").field(TEXT_FIELD_NAME).field(KEYWORD_FIELD_NAME)
-            .toQuery(createShardContext());
-        Query expected = new DisjunctionMaxQuery(List.of(
-            new TermQuery(new Term(TEXT_FIELD_NAME, "test")),
-            new TermQuery(new Term(KEYWORD_FIELD_NAME, "test"))), 1);
+        Query query = queryStringQuery("test").field(TEXT_FIELD_NAME).field(KEYWORD_FIELD_NAME).toQuery(createShardContext());
+        Query expected = new DisjunctionMaxQuery(
+            List.of(new TermQuery(new Term(TEXT_FIELD_NAME, "test")), new TermQuery(new Term(KEYWORD_FIELD_NAME, "test"))),
+            1
+        );
         assertEquals(expected, query);
     }
 
     public void testToQueryFieldsWildcard() throws Exception {
         Query query = queryStringQuery("test").field("mapped_str*").toQuery(createShardContext());
-        Query expected = new DisjunctionMaxQuery(List.of(
-            new TermQuery(new Term(TEXT_FIELD_NAME, "test")),
-            new TermQuery(new Term(KEYWORD_FIELD_NAME, "test"))), 1);
+        Query expected = new DisjunctionMaxQuery(
+            List.of(new TermQuery(new Term(TEXT_FIELD_NAME, "test")), new TermQuery(new Term(KEYWORD_FIELD_NAME, "test"))),
+            1
+        );
         assertEquals(expected, query);
     }
 
@@ -543,12 +542,14 @@ public class QueryStringQueryBuilderTests extends AbstractQueryTestCase<QueryStr
     }
 
     public void testToQueryDisMaxQuery() throws Exception {
-        Query query = queryStringQuery("test").field(TEXT_FIELD_NAME, 2.2f)
-            .field(KEYWORD_FIELD_NAME)
-            .toQuery(createShardContext());
-        Query expected = new DisjunctionMaxQuery(List.of(
-            new BoostQuery(new TermQuery(new Term(TEXT_FIELD_NAME, "test")), 2.2f),
-            new TermQuery(new Term(KEYWORD_FIELD_NAME, "test"))), 1);
+        Query query = queryStringQuery("test").field(TEXT_FIELD_NAME, 2.2f).field(KEYWORD_FIELD_NAME).toQuery(createShardContext());
+        Query expected = new DisjunctionMaxQuery(
+            List.of(
+                new BoostQuery(new TermQuery(new Term(TEXT_FIELD_NAME, "test")), 2.2f),
+                new TermQuery(new Term(KEYWORD_FIELD_NAME, "test"))
+            ),
+            1
+        );
         assertEquals(expected, query);
     }
 
@@ -602,31 +603,50 @@ public class QueryStringQueryBuilderTests extends AbstractQueryTestCase<QueryStr
             queryParser.setForceAnalyzer(new MockRepeatAnalyzer());
             Query query = queryParser.parse("first foo-bar-foobar* last");
 
-            Query expectedQuery = new BooleanQuery.Builder()
-                .add(new BooleanClause(new SynonymQuery.Builder(TEXT_FIELD_NAME)
-                    .addTerm(new Term(TEXT_FIELD_NAME, "first"))
-                    .addTerm(new Term(TEXT_FIELD_NAME, "first"))
-                    .build(), defaultOp))
-                .add(new BooleanQuery.Builder()
-                    .add(new BooleanClause(new SynonymQuery.Builder(TEXT_FIELD_NAME)
-                        .addTerm(new Term(TEXT_FIELD_NAME, "foo"))
-                        .addTerm(new Term(TEXT_FIELD_NAME, "foo"))
-                        .build(), defaultOp))
-                    .add(new BooleanClause(new SynonymQuery.Builder(TEXT_FIELD_NAME)
-                        .addTerm(new Term(TEXT_FIELD_NAME, "bar"))
-                        .addTerm(new Term(TEXT_FIELD_NAME, "bar"))
-                        .build(), defaultOp))
-                    .add(new BooleanQuery.Builder()
-                        .add(new BooleanClause(new PrefixQuery(new Term(TEXT_FIELD_NAME, "foobar")),
-                            BooleanClause.Occur.SHOULD))
-                        .add(new BooleanClause(new PrefixQuery(new Term(TEXT_FIELD_NAME, "foobar")),
-                            BooleanClause.Occur.SHOULD))
-                        .build(), defaultOp)
-                    .build(), defaultOp)
-                .add(new BooleanClause(new SynonymQuery.Builder(TEXT_FIELD_NAME)
-                    .addTerm(new Term(TEXT_FIELD_NAME, "last"))
-                    .addTerm(new Term(TEXT_FIELD_NAME, "last"))
-                    .build(), defaultOp))
+            Query expectedQuery = new BooleanQuery.Builder().add(
+                new BooleanClause(
+                    new SynonymQuery.Builder(TEXT_FIELD_NAME).addTerm(new Term(TEXT_FIELD_NAME, "first"))
+                        .addTerm(new Term(TEXT_FIELD_NAME, "first"))
+                        .build(),
+                    defaultOp
+                )
+            )
+                .add(
+                    new BooleanQuery.Builder().add(
+                        new BooleanClause(
+                            new SynonymQuery.Builder(TEXT_FIELD_NAME).addTerm(new Term(TEXT_FIELD_NAME, "foo"))
+                                .addTerm(new Term(TEXT_FIELD_NAME, "foo"))
+                                .build(),
+                            defaultOp
+                        )
+                    )
+                        .add(
+                            new BooleanClause(
+                                new SynonymQuery.Builder(TEXT_FIELD_NAME).addTerm(new Term(TEXT_FIELD_NAME, "bar"))
+                                    .addTerm(new Term(TEXT_FIELD_NAME, "bar"))
+                                    .build(),
+                                defaultOp
+                            )
+                        )
+                        .add(
+                            new BooleanQuery.Builder().add(
+                                new BooleanClause(new PrefixQuery(new Term(TEXT_FIELD_NAME, "foobar")), BooleanClause.Occur.SHOULD)
+                            )
+                                .add(new BooleanClause(new PrefixQuery(new Term(TEXT_FIELD_NAME, "foobar")), BooleanClause.Occur.SHOULD))
+                                .build(),
+                            defaultOp
+                        )
+                        .build(),
+                    defaultOp
+                )
+                .add(
+                    new BooleanClause(
+                        new SynonymQuery.Builder(TEXT_FIELD_NAME).addTerm(new Term(TEXT_FIELD_NAME, "last"))
+                            .addTerm(new Term(TEXT_FIELD_NAME, "last"))
+                            .build(),
+                        defaultOp
+                    )
+                )
                 .build();
             assertThat(query, Matchers.equalTo(expectedQuery));
         }

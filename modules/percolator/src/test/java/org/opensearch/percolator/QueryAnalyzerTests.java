@@ -830,9 +830,7 @@ public class QueryAnalyzerTests extends OpenSearchTestCase {
         assertThat(result.minimumShouldMatch, equalTo(0));
         assertThat(result.extractions.isEmpty(), is(true));
 
-        query = new SynonymQuery.Builder("_field")
-            .addTerm(new Term("_field", "_value1"))
-            .addTerm(new Term("_field", "_value2")).build();
+        query = new SynonymQuery.Builder("_field").addTerm(new Term("_field", "_value1")).addTerm(new Term("_field", "_value2")).build();
         result = analyze(query, Version.CURRENT);
         assertThat(result.verified, is(true));
         assertThat(result.minimumShouldMatch, equalTo(1));

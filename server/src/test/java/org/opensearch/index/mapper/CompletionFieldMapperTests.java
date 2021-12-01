@@ -715,7 +715,8 @@ public class CompletionFieldMapperTests extends MapperTestCase {
         Mapper fieldMapper = defaultMapper.mappers().getMapper("field");
         CompletionFieldMapper completionFieldMapper = (CompletionFieldMapper) fieldMapper;
         Query prefixQuery = completionFieldMapper.fieldType()
-            .fuzzyQuery("co",
+            .fuzzyQuery(
+                "co",
                 Fuzziness.fromEdits(FuzzyCompletionQuery.DEFAULT_MAX_EDITS),
                 FuzzyCompletionQuery.DEFAULT_NON_FUZZY_PREFIX,
                 FuzzyCompletionQuery.DEFAULT_MIN_FUZZY_LENGTH,

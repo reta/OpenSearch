@@ -42,7 +42,6 @@ import org.opensearch.test.AbstractQueryTestCase;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -104,9 +103,7 @@ public class DisMaxQueryBuilderTests extends AbstractQueryTestCase<DisMaxQueryBu
             + "    }\n"
             + "}";
         Query query = parseQuery(queryAsString).toQuery(createShardContext());
-        Query expected = new DisjunctionMaxQuery(List.of(
-            new BoostQuery(new PrefixQuery(new Term(TEXT_FIELD_NAME, "sh")), 1.2f)
-        ), 1);
+        Query expected = new DisjunctionMaxQuery(List.of(new BoostQuery(new PrefixQuery(new Term(TEXT_FIELD_NAME, "sh")), 1.2f)), 1);
         assertEquals(expected, query);
     }
 

@@ -567,11 +567,10 @@ public class PluginsService implements ReportingService<PluginsAndModules> {
 
     private static <T> List<? extends T> createExtensions(Class<T> extensionPointType, Plugin plugin) {
         List<T> extensions = new ArrayList<>();
-        ServiceLoader.load(extensionPointType,  plugin.getClass().getClassLoader()).stream()
+        ServiceLoader.load(extensionPointType, plugin.getClass().getClassLoader())
+            .stream()
             .map(ServiceLoader.Provider::type)
-            .forEachOrdered(service -> {
-                extensions.add(createExtension(service, extensionPointType, plugin));
-            });
+            .forEachOrdered(service -> { extensions.add(createExtension(service, extensionPointType, plugin)); });
         return extensions;
     }
 

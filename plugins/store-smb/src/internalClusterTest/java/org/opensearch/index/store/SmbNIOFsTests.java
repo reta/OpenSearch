@@ -34,7 +34,6 @@ package org.opensearch.index.store;
 
 import org.opensearch.common.settings.Settings;
 
-
 public class SmbNIOFsTests extends AbstractAzureFsTestCase {
     @Override
     public Settings indexSettings() {

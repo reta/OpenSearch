@@ -78,46 +78,48 @@ public class FieldMaskingSpanQueryBuilderTests extends AbstractQueryTestCase<Fie
     }
 
     public void testFromJson() throws IOException {
-        String json =
-                "{\n" +
-                "  \"field_masking_span\" : {\n" +
-                "    \"query\" : {\n" +
-                "      \"span_term\" : {\n" +
-                "        \"value\" : {\n" +
-                "          \"value\" : 0.5,\n" +
-                "          \"boost\" : 0.23\n" +
-                "        }\n" +
-                "      }\n" +
-                "    },\n" +
-                "    \"field\" : \"mapped_geo_shape\",\n" +
-                "    \"boost\" : 42.0,\n" +
-                "    \"_name\" : \"KPI\"\n" +
-                "  }\n" +
-                "}";
+        String json = "{\n"
+            + "  \"field_masking_span\" : {\n"
+            + "    \"query\" : {\n"
+            + "      \"span_term\" : {\n"
+            + "        \"value\" : {\n"
+            + "          \"value\" : 0.5,\n"
+            + "          \"boost\" : 0.23\n"
+            + "        }\n"
+            + "      }\n"
+            + "    },\n"
+            + "    \"field\" : \"mapped_geo_shape\",\n"
+            + "    \"boost\" : 42.0,\n"
+            + "    \"_name\" : \"KPI\"\n"
+            + "  }\n"
+            + "}";
         Exception exception = expectThrows(ParsingException.class, () -> parseQuery(json));
-        assertThat(exception.getMessage(),
-            equalTo("field_masking_span [query] as a nested span clause can't have non-default boost value [0.23]"));
+        assertThat(
+            exception.getMessage(),
+            equalTo("field_masking_span [query] as a nested span clause can't have non-default boost value [0.23]")
+        );
     }
 
     public void testJsonSpanTermWithBoost() throws IOException {
-        String json =
-            "{\n" +
-                "  \"field_masking_span\" : {\n" +
-                "    \"query\" : {\n" +
-                "      \"span_term\" : {\n" +
-                "        \"value\" : {\n" +
-                "          \"value\" : \"term\",\n" +
-                "        }\n" +
-                "      }\n" +
-                "    },\n" +
-                "    \"field\" : \"mapped_geo_shape\",\n" +
-                "    \"boost\" : 42.0,\n" +
-                "    \"_name\" : \"KPI\"\n" +
-                "  }\n" +
-                "}";
+        String json = "{\n"
+            + "  \"field_masking_span\" : {\n"
+            + "    \"query\" : {\n"
+            + "      \"span_term\" : {\n"
+            + "        \"value\" : {\n"
+            + "          \"value\" : \"term\",\n"
+            + "        }\n"
+            + "      }\n"
+            + "    },\n"
+            + "    \"field\" : \"mapped_geo_shape\",\n"
+            + "    \"boost\" : 42.0,\n"
+            + "    \"_name\" : \"KPI\"\n"
+            + "  }\n"
+            + "}";
         Query query = parseQuery(json).toQuery(createShardContext());
-        assertEquals(new BoostQuery(new FieldMaskingSpanQuery(
-            new SpanTermQuery(new Term("value", "term")), "mapped_geo_shape"), 42f), query);
+        assertEquals(
+            new BoostQuery(new FieldMaskingSpanQuery(new SpanTermQuery(new Term("value", "term")), "mapped_geo_shape"), 42f),
+            query
+        );
     }
 
     public void testDeprecatedName() throws IOException {

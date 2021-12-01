@@ -544,10 +544,7 @@ public abstract class AbstractQueryTestCase<QB extends AbstractQueryBuilder<QB>>
         }
         if (query != null) {
             if (queryBuilder.boost() != AbstractQueryBuilder.DEFAULT_BOOST) {
-                assertThat(
-                    query,
-                    either(instanceOf(BoostQuery.class)).or(instanceOf(MatchNoDocsQuery.class))
-                );
+                assertThat(query, either(instanceOf(BoostQuery.class)).or(instanceOf(MatchNoDocsQuery.class)));
                 if (query instanceof BoostQuery) {
                     BoostQuery boostQuery = (BoostQuery) query;
                     if (boostQuery.getQuery() instanceof MatchNoDocsQuery == false) {

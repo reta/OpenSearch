@@ -508,31 +508,50 @@ public class SimpleQueryStringBuilderTests extends AbstractQueryTestCase<SimpleQ
             BooleanClause.Occur defaultOp = op.toBooleanClauseOccur();
             parser.setDefaultOperator(defaultOp);
             Query query = parser.parse("first foo-bar-foobar* last");
-            Query expectedQuery = new BooleanQuery.Builder()
-                .add(new BooleanClause(new SynonymQuery.Builder(TEXT_FIELD_NAME)
-                    .addTerm(new Term(TEXT_FIELD_NAME, "first"))
-                    .addTerm(new Term(TEXT_FIELD_NAME, "first"))
-                    .build(), defaultOp))
-                .add(new BooleanQuery.Builder()
-                    .add(new BooleanClause(new SynonymQuery.Builder(TEXT_FIELD_NAME)
-                        .addTerm(new Term(TEXT_FIELD_NAME, "foo"))
-                        .addTerm(new Term(TEXT_FIELD_NAME, "foo"))
-                        .build(), defaultOp))
-                    .add(new BooleanClause(new SynonymQuery.Builder(TEXT_FIELD_NAME)
-                        .addTerm(new Term(TEXT_FIELD_NAME, "bar"))
-                        .addTerm(new Term(TEXT_FIELD_NAME, "bar"))
-                        .build(), defaultOp))
-                    .add(new BooleanQuery.Builder()
-                        .add(new BooleanClause(new PrefixQuery(new Term(TEXT_FIELD_NAME, "foobar")),
-                            BooleanClause.Occur.SHOULD))
-                        .add(new BooleanClause(new PrefixQuery(new Term(TEXT_FIELD_NAME, "foobar")),
-                            BooleanClause.Occur.SHOULD))
-                        .build(), defaultOp)
-                    .build(), defaultOp)
-                .add(new BooleanClause(new SynonymQuery.Builder(TEXT_FIELD_NAME)
-                    .addTerm(new Term(TEXT_FIELD_NAME, "last"))
-                    .addTerm(new Term(TEXT_FIELD_NAME, "last"))
-                    .build(), defaultOp))
+            Query expectedQuery = new BooleanQuery.Builder().add(
+                new BooleanClause(
+                    new SynonymQuery.Builder(TEXT_FIELD_NAME).addTerm(new Term(TEXT_FIELD_NAME, "first"))
+                        .addTerm(new Term(TEXT_FIELD_NAME, "first"))
+                        .build(),
+                    defaultOp
+                )
+            )
+                .add(
+                    new BooleanQuery.Builder().add(
+                        new BooleanClause(
+                            new SynonymQuery.Builder(TEXT_FIELD_NAME).addTerm(new Term(TEXT_FIELD_NAME, "foo"))
+                                .addTerm(new Term(TEXT_FIELD_NAME, "foo"))
+                                .build(),
+                            defaultOp
+                        )
+                    )
+                        .add(
+                            new BooleanClause(
+                                new SynonymQuery.Builder(TEXT_FIELD_NAME).addTerm(new Term(TEXT_FIELD_NAME, "bar"))
+                                    .addTerm(new Term(TEXT_FIELD_NAME, "bar"))
+                                    .build(),
+                                defaultOp
+                            )
+                        )
+                        .add(
+                            new BooleanQuery.Builder().add(
+                                new BooleanClause(new PrefixQuery(new Term(TEXT_FIELD_NAME, "foobar")), BooleanClause.Occur.SHOULD)
+                            )
+                                .add(new BooleanClause(new PrefixQuery(new Term(TEXT_FIELD_NAME, "foobar")), BooleanClause.Occur.SHOULD))
+                                .build(),
+                            defaultOp
+                        )
+                        .build(),
+                    defaultOp
+                )
+                .add(
+                    new BooleanClause(
+                        new SynonymQuery.Builder(TEXT_FIELD_NAME).addTerm(new Term(TEXT_FIELD_NAME, "last"))
+                            .addTerm(new Term(TEXT_FIELD_NAME, "last"))
+                            .build(),
+                        defaultOp
+                    )
+                )
                 .build();
             assertThat(query, equalTo(expectedQuery));
         }

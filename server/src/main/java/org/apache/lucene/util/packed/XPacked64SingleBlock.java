@@ -32,8 +32,7 @@ import org.apache.lucene.util.RamUsageEstimator;
 abstract class XPacked64SingleBlock extends XPackedInts.MutableImpl {
 
     public static final int MAX_SUPPORTED_BITS_PER_VALUE = 32;
-    private static final int[] SUPPORTED_BITS_PER_VALUE =
-        new int[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 16, 21, 32};
+    private static final int[] SUPPORTED_BITS_PER_VALUE = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 16, 21, 32 };
 
     public static boolean isSupported(int bitsPerValue) {
         return Arrays.binarySearch(SUPPORTED_BITS_PER_VALUE, bitsPerValue) >= 0;
@@ -60,9 +59,9 @@ abstract class XPacked64SingleBlock extends XPackedInts.MutableImpl {
     @Override
     public long ramBytesUsed() {
         return RamUsageEstimator.alignObjectSize(
-            RamUsageEstimator.NUM_BYTES_OBJECT_HEADER
-                + 2 * Integer.BYTES // valueCount,bitsPerValue
-                + RamUsageEstimator.NUM_BYTES_OBJECT_REF) // blocks ref
+            RamUsageEstimator.NUM_BYTES_OBJECT_HEADER + 2 * Integer.BYTES // valueCount,bitsPerValue
+                + RamUsageEstimator.NUM_BYTES_OBJECT_REF
+        ) // blocks ref
             + RamUsageEstimator.sizeOf(blocks);
     }
 
@@ -91,8 +90,7 @@ abstract class XPacked64SingleBlock extends XPackedInts.MutableImpl {
         // bulk get
         assert index % valuesPerBlock == 0;
         @SuppressWarnings("deprecation")
-        final PackedInts.Decoder decoder =
-            BulkOperation.of(PackedInts.Format.PACKED_SINGLE_BLOCK, bitsPerValue);
+        final PackedInts.Decoder decoder = BulkOperation.of(PackedInts.Format.PACKED_SINGLE_BLOCK, bitsPerValue);
         assert decoder.longBlockCount() == 1;
         assert decoder.longValueCount() == valuesPerBlock;
         final int blockIndex = index / valuesPerBlock;
@@ -206,18 +204,10 @@ abstract class XPacked64SingleBlock extends XPackedInts.MutableImpl {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName()
-            + "(bitsPerValue="
-            + bitsPerValue
-            + ",size="
-            + size()
-            + ",blocks="
-            + blocks.length
-            + ")";
+        return getClass().getSimpleName() + "(bitsPerValue=" + bitsPerValue + ",size=" + size() + ",blocks=" + blocks.length + ")";
     }
 
-    public static XPacked64SingleBlock create(DataInput in, int valueCount, int bitsPerValue)
-        throws IOException {
+    public static XPacked64SingleBlock create(DataInput in, int valueCount, int bitsPerValue) throws IOException {
         XPacked64SingleBlock reader = create(valueCount, bitsPerValue);
         for (int i = 0; i < reader.blocks.length; ++i) {
             reader.blocks[i] = in.readLong();

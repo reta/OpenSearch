@@ -34,7 +34,6 @@ package org.opensearch.percolator;
 
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.LeafReaderContext;
-import org.apache.lucene.index.Term;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.Explanation;
 import org.apache.lucene.search.IndexSearcher;
@@ -57,7 +56,6 @@ import org.opensearch.common.lucene.Lucene;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 final class PercolateQuery extends Query implements Accountable {
 

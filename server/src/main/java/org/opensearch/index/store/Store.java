@@ -669,8 +669,7 @@ public class Store extends AbstractIndexShardComponent implements Closeable, Ref
                     directory.deleteFile(reason, existingFile);
                     // FNF should not happen since we hold a write lock?
                 } catch (IOException ex) {
-                    if (existingFile.startsWith(IndexFileNames.SEGMENTS)
-                        || existingFile.startsWith(CORRUPTED_MARKER_NAME_PREFIX)) {
+                    if (existingFile.startsWith(IndexFileNames.SEGMENTS) || existingFile.startsWith(CORRUPTED_MARKER_NAME_PREFIX)) {
                         // TODO do we need to also fail this if we can't delete the pending commit file?
                         // if one of those files can't be deleted we better fail the cleanup otherwise we might leave an old commit
                         // point around?
@@ -1089,12 +1088,13 @@ public class Store extends AbstractIndexShardComponent implements Closeable, Ref
             RecoveryDiff recoveryDiff = new RecoveryDiff(
                 Collections.unmodifiableList(identical),
                 Collections.unmodifiableList(different),
-                Collections.unmodifiableList(missing));
-            assert recoveryDiff.size() == this.metadata.size()
-                : "some files are missing recoveryDiff size: ["
+                Collections.unmodifiableList(missing)
+            );
+            assert recoveryDiff.size() == this.metadata.size() : "some files are missing recoveryDiff size: ["
                 + recoveryDiff.size()
                 + "] metadata size: ["
-                + this.metadata.size() + "]";
+                + this.metadata.size()
+                + "]";
             return recoveryDiff;
         }
 

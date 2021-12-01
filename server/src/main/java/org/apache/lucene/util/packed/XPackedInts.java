@@ -68,11 +68,9 @@ public class XPackedInts {
     /** Check the validity of a version number. */
     public static void checkVersion(int version) {
         if (version < VERSION_START) {
-            throw new IllegalArgumentException(
-                "Version is too old, should be at least " + VERSION_START + " (got " + version + ")");
+            throw new IllegalArgumentException("Version is too old, should be at least " + VERSION_START + " (got " + version + ")");
         } else if (version > VERSION_CURRENT) {
-            throw new IllegalArgumentException(
-                "Version is too new, should be at most " + VERSION_CURRENT + " (got " + version + ")");
+            throw new IllegalArgumentException("Version is too new, should be at most " + VERSION_CURRENT + " (got " + version + ")");
         }
     }
 
@@ -86,8 +84,7 @@ public class XPackedInts {
      *
      * <p>If you don't know how many values you are going to write, use <code>valueCount = -1</code>.
      */
-    public static FormatAndBits fastestFormatAndBits(
-        int valueCount, int bitsPerValue, float acceptableOverheadRatio) {
+    public static FormatAndBits fastestFormatAndBits(int valueCount, int bitsPerValue, float acceptableOverheadRatio) {
         if (valueCount == -1) {
             valueCount = Integer.MAX_VALUE;
         }
@@ -127,8 +124,7 @@ public class XPackedInts {
         int off;
         int written;
 
-        XPackedWriter(
-            PackedInts.Format format, DataOutput out, int valueCount, int bitsPerValue, int mem) {
+        XPackedWriter(PackedInts.Format format, DataOutput out, int valueCount, int bitsPerValue, int mem) {
             super(out, valueCount, bitsPerValue);
             this.format = format;
             encoder = BulkOperation.of(format, bitsPerValue);
@@ -246,8 +242,7 @@ public class XPackedInts {
          * return a reader with the same number of bits per value.
          */
         public void save(DataOutput out) throws IOException {
-            XWriter writer =
-                getWriterNoHeader(out, getFormat(), size(), getBitsPerValue(), DEFAULT_BUFFER_SIZE);
+            XWriter writer = getWriterNoHeader(out, getFormat(), size(), getBitsPerValue(), DEFAULT_BUFFER_SIZE);
             writer.writeHeader();
             for (int i = 0; i < size(); ++i) {
                 writer.add(get(i));
@@ -305,12 +300,7 @@ public class XPackedInts {
 
         @Override
         public String toString() {
-            return getClass().getSimpleName()
-                + "(valueCount="
-                + valueCount
-                + ",bitsPerValue="
-                + bitsPerValue
-                + ")";
+            return getClass().getSimpleName() + "(valueCount=" + valueCount + ",bitsPerValue=" + bitsPerValue + ")";
         }
     }
 
@@ -345,8 +335,7 @@ public class XPackedInts {
 
         @Override
         public long ramBytesUsed() {
-            return RamUsageEstimator.alignObjectSize(
-                RamUsageEstimator.NUM_BYTES_OBJECT_HEADER + Integer.BYTES);
+            return RamUsageEstimator.alignObjectSize(RamUsageEstimator.NUM_BYTES_OBJECT_HEADER + Integer.BYTES);
         }
     }
 
@@ -410,9 +399,7 @@ public class XPackedInts {
      * @see XPackedInts#getWriterNoHeader(DataOutput, Format, int, int, int)
      * @lucene.internal
      */
-    public static Reader getReaderNoHeader(
-        DataInput in, Format format, int version, int valueCount, int bitsPerValue)
-        throws IOException {
+    public static Reader getReaderNoHeader(DataInput in, Format format, int version, int valueCount, int bitsPerValue) throws IOException {
         checkVersion(version);
         switch (format) {
             case PACKED_SINGLE_BLOCK:
@@ -459,7 +446,13 @@ public class XPackedInts {
      * @lucene.internal
      */
     public static ReaderIterator getReaderIteratorNoHeader(
-        DataInput in, Format format, int version, int valueCount, int bitsPerValue, int mem) {
+        DataInput in,
+        Format format,
+        int version,
+        int valueCount,
+        int bitsPerValue,
+        int mem
+    ) {
         checkVersion(version);
         return new PackedReaderIterator(format, version, valueCount, bitsPerValue, in, mem);
     }
@@ -499,8 +492,7 @@ public class XPackedInts {
      * @return a direct Reader
      * @lucene.internal
      */
-    public static Reader getDirectReaderNoHeader(
-        final IndexInput in, Format format, int version, int valueCount, int bitsPerValue) {
+    public static Reader getDirectReaderNoHeader(final IndexInput in, Format format, int version, int valueCount, int bitsPerValue) {
         checkVersion(version);
         switch (format) {
             case PACKED:
@@ -551,10 +543,8 @@ public class XPackedInts {
      * @return a mutable packed integer array
      * @lucene.internal
      */
-    public static Mutable getMutable(
-        int valueCount, int bitsPerValue, float acceptableOverheadRatio) {
-        final FormatAndBits formatAndBits =
-            fastestFormatAndBits(valueCount, bitsPerValue, acceptableOverheadRatio);
+    public static Mutable getMutable(int valueCount, int bitsPerValue, float acceptableOverheadRatio) {
+        final FormatAndBits formatAndBits = fastestFormatAndBits(valueCount, bitsPerValue, acceptableOverheadRatio);
         return getMutable(valueCount, formatAndBits.bitsPerValue, formatAndBits.format);
     }
 
@@ -616,8 +606,7 @@ public class XPackedInts {
      * @see XPackedInts#getReaderNoHeader(DataInput, Format, int, int, int)
      * @lucene.internal
      */
-    public static XWriter getWriterNoHeader(
-        DataOutput out, Format format, int valueCount, int bitsPerValue, int mem) {
+    public static XWriter getWriterNoHeader(DataOutput out, Format format, int valueCount, int bitsPerValue, int mem) {
         return new XPackedWriter(format, out, valueCount, bitsPerValue, mem);
     }
 
@@ -650,16 +639,11 @@ public class XPackedInts {
      * @throws IOException If there is a low-level I/O error
      * @lucene.internal
      */
-    public static Writer getWriter(
-        DataOutput out, int valueCount, int bitsPerValue, float acceptableOverheadRatio)
-        throws IOException {
+    public static Writer getWriter(DataOutput out, int valueCount, int bitsPerValue, float acceptableOverheadRatio) throws IOException {
         assert valueCount >= 0;
 
-        final FormatAndBits formatAndBits =
-            fastestFormatAndBits(valueCount, bitsPerValue, acceptableOverheadRatio);
-        final XWriter writer =
-            getWriterNoHeader(
-                out, formatAndBits.format, valueCount, formatAndBits.bitsPerValue, DEFAULT_BUFFER_SIZE);
+        final FormatAndBits formatAndBits = fastestFormatAndBits(valueCount, bitsPerValue, acceptableOverheadRatio);
+        final XWriter writer = getWriterNoHeader(out, formatAndBits.format, valueCount, formatAndBits.bitsPerValue, DEFAULT_BUFFER_SIZE);
         writer.writeHeader();
         return writer;
     }
@@ -752,13 +736,7 @@ public class XPackedInts {
      */
     static int checkBlockSize(int blockSize, int minBlockSize, int maxBlockSize) {
         if (blockSize < minBlockSize || blockSize > maxBlockSize) {
-            throw new IllegalArgumentException(
-                "blockSize must be >= "
-                    + minBlockSize
-                    + " and <= "
-                    + maxBlockSize
-                    + ", got "
-                    + blockSize);
+            throw new IllegalArgumentException("blockSize must be >= " + minBlockSize + " and <= " + maxBlockSize + ", got " + blockSize);
         }
         if ((blockSize & (blockSize - 1)) != 0) {
             throw new IllegalArgumentException("blockSize must be a power of two, got " + blockSize);

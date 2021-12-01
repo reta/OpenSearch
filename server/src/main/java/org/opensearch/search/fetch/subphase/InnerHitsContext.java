@@ -190,7 +190,8 @@ public final class InnerHitsContext {
         try {
             Bits acceptDocs = ctx.reader().getLiveDocs();
             DocIdSetIterator iterator = ConjunctionUtils.intersectIterators(
-                Arrays.asList(innerHitQueryScorer.iterator(), scorer.iterator()));
+                Arrays.asList(innerHitQueryScorer.iterator(), scorer.iterator())
+            );
             for (int docId = iterator.nextDoc(); docId < DocIdSetIterator.NO_MORE_DOCS; docId = iterator.nextDoc()) {
                 if (acceptDocs == null || acceptDocs.get(docId)) {
                     leafCollector.collect(docId);

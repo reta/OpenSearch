@@ -75,14 +75,11 @@ class XPacked64 extends XPackedInts.MutableImpl {
      * @param bitsPerValue the number of bits available for any given value.
      * @throws java.io.IOException if the values for the backing array could not be retrieved.
      */
-    public XPacked64(int packedIntsVersion, DataInput in, int valueCount, int bitsPerValue)
-        throws IOException {
+    public XPacked64(int packedIntsVersion, DataInput in, int valueCount, int bitsPerValue) throws IOException {
         super(valueCount, bitsPerValue);
         final PackedInts.Format format = PackedInts.Format.PACKED;
-        final long byteCount =
-            format.byteCount(packedIntsVersion, valueCount, bitsPerValue); // to know how much to read
-        final int longCount =
-            format.longCount(PackedInts.VERSION_CURRENT, valueCount, bitsPerValue); // to size the array
+        final long byteCount = format.byteCount(packedIntsVersion, valueCount, bitsPerValue); // to know how much to read
+        final int longCount = format.longCount(PackedInts.VERSION_CURRENT, valueCount, bitsPerValue); // to size the array
         blocks = new long[longCount];
         // read as many longs as we can
         for (int i = 0; i < byteCount / 8; ++i) {
@@ -118,8 +115,7 @@ class XPacked64 extends XPackedInts.MutableImpl {
             return (blocks[elementPos] >>> -endBits) & maskRight;
         }
         // Two blocks
-        return ((blocks[elementPos] << endBits) | (blocks[elementPos + 1] >>> (BLOCK_SIZE - endBits)))
-            & maskRight;
+        return ((blocks[elementPos] << endBits) | (blocks[elementPos + 1] >>> (BLOCK_SIZE - endBits))) & maskRight;
     }
 
     @Override
@@ -180,8 +176,7 @@ class XPacked64 extends XPackedInts.MutableImpl {
         }
         // Two blocks
         blocks[elementPos] = blocks[elementPos] & ~(maskRight >>> endBits) | (value >>> endBits);
-        blocks[elementPos + 1] =
-            blocks[elementPos + 1] & (~0L >>> endBits) | (value << (BLOCK_SIZE - endBits));
+        blocks[elementPos + 1] = blocks[elementPos + 1] & (~0L >>> endBits) | (value << (BLOCK_SIZE - endBits));
     }
 
     @Override
@@ -229,22 +224,16 @@ class XPacked64 extends XPackedInts.MutableImpl {
 
     @Override
     public String toString() {
-        return "Packed64(bitsPerValue="
-            + bitsPerValue
-            + ",size="
-            + size()
-            + ",blocks="
-            + blocks.length
-            + ")";
+        return "Packed64(bitsPerValue=" + bitsPerValue + ",size=" + size() + ",blocks=" + blocks.length + ")";
     }
 
     @Override
     public long ramBytesUsed() {
         return RamUsageEstimator.alignObjectSize(
-            RamUsageEstimator.NUM_BYTES_OBJECT_HEADER
-                + 3 * Integer.BYTES // bpvMinusBlockSize,valueCount,bitsPerValue
+            RamUsageEstimator.NUM_BYTES_OBJECT_HEADER + 3 * Integer.BYTES // bpvMinusBlockSize,valueCount,bitsPerValue
                 + Long.BYTES // maskRight
-                + RamUsageEstimator.NUM_BYTES_OBJECT_REF) // blocks ref
+                + RamUsageEstimator.NUM_BYTES_OBJECT_REF
+        ) // blocks ref
             + RamUsageEstimator.sizeOf(blocks);
     }
 
