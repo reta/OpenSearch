@@ -135,7 +135,7 @@ public class FieldMaskingSpanQueryBuilder extends AbstractQueryBuilder<FieldMask
                         );
                     }
                     inner = (SpanQueryBuilder) query;
-                    SpanQueryBuilderUtil.checkNoBoost(NAME, currentFieldName, parser, inner);
+                    SpanQueryBuilderUtil.checkNoBoost(SPAN_FIELD_MASKING_FIELD.getPreferredName(), currentFieldName, parser, inner);
                 } else {
                     throw new ParsingException(
                         parser.getTokenLocation(),
