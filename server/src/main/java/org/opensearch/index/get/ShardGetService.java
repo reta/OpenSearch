@@ -39,6 +39,7 @@ import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.IndexableFieldType;
 import org.apache.lucene.index.StoredFieldVisitor;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.index.VectorSimilarityFunction;
 import org.apache.lucene.index.VectorValues;
 import org.opensearch.OpenSearchException;
 import org.opensearch.common.Nullable;
@@ -340,7 +341,7 @@ public final class ShardGetService extends AbstractIndexShardComponent {
                                 0,
                                 0,
                                 0,
-                                VectorValues.SimilarityFunction.NONE,
+                                VectorSimilarityFunction.EUCLIDEAN,
                                 false
                             );
                             StoredFieldVisitor.Status status = fieldVisitor.needsField(fieldInfo);

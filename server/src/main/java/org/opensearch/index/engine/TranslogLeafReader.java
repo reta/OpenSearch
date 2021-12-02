@@ -46,6 +46,7 @@ import org.apache.lucene.index.SortedNumericDocValues;
 import org.apache.lucene.index.SortedSetDocValues;
 import org.apache.lucene.index.StoredFieldVisitor;
 import org.apache.lucene.index.Terms;
+import org.apache.lucene.index.VectorSimilarityFunction;
 import org.apache.lucene.index.VectorValues;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.util.Bits;
@@ -81,7 +82,7 @@ public final class TranslogLeafReader extends LeafReader {
         0,
         0,
         0,
-        VectorValues.SimilarityFunction.NONE,
+        VectorSimilarityFunction.EUCLIDEAN,
         false
     );
     private static final FieldInfo FAKE_ROUTING_FIELD = new FieldInfo(
@@ -98,7 +99,7 @@ public final class TranslogLeafReader extends LeafReader {
         0,
         0,
         0,
-        VectorValues.SimilarityFunction.NONE,
+        VectorSimilarityFunction.EUCLIDEAN,
         false
     );
     private static final FieldInfo FAKE_ID_FIELD = new FieldInfo(
@@ -115,7 +116,7 @@ public final class TranslogLeafReader extends LeafReader {
         0,
         0,
         0,
-        VectorValues.SimilarityFunction.NONE,
+        VectorSimilarityFunction.EUCLIDEAN,
         false
     );
     public static Set<String> ALL_FIELD_NAMES = Sets.newHashSet(FAKE_SOURCE_FIELD.name, FAKE_ROUTING_FIELD.name, FAKE_ID_FIELD.name);
@@ -241,7 +242,7 @@ public final class TranslogLeafReader extends LeafReader {
     }
 
     @Override
-    public TopDocs searchNearestVectors(String field, float[] target, int k, int fanout) throws IOException {
-        return searchNearestVectors(field, target, k, fanout);
+    public TopDocs searchNearestVectors(String field, float[] target, int k, Bits acceptDocs) throws IOException {
+        throw new UnsupportedOperationException();
     }
 }

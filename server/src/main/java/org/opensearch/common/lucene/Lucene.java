@@ -1118,7 +1118,7 @@ public class Lucene {
             }
 
             @Override
-            public TopDocs searchNearestVectors(String field, float[] target, int k, int fanout) throws IOException {
+            public TopDocs searchNearestVectors(String field, float[] target, int k, Bits acceptDocs) throws IOException {
                 return null;
             }
         };
