@@ -366,7 +366,7 @@ public class KeyStoreWrapperTests extends OpenSearchTestCase {
         assumeFalse("Can't run in a FIPS JVM as PBE is not available", inFipsJvm());
         Path configDir = env.configFile();
         NIOFSDirectory directory = new NIOFSDirectory(configDir);
-        try (IndexOutput output = EndiannessReverserUtil.createOutput(directory,"opensearch.keystore", IOContext.DEFAULT)) {
+        try (IndexOutput output = EndiannessReverserUtil.createOutput(directory, "opensearch.keystore", IOContext.DEFAULT)) {
             CodecUtil.writeHeader(output, "opensearch.keystore", 1);
             output.writeByte((byte) 0); // hasPassword = false
             output.writeString("PKCS12");

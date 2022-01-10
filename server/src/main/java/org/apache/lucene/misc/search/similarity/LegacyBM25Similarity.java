@@ -79,8 +79,7 @@ public final class LegacyBM25Similarity extends Similarity {
     }
 
     @Override
-    public SimScorer scorer(
-        float boost, CollectionStatistics collectionStats, TermStatistics... termStats) {
+    public SimScorer scorer(float boost, CollectionStatistics collectionStats, TermStatistics... termStats) {
         return bm25Similarity.scorer(boost * (1 + bm25Similarity.getK1()), collectionStats, termStats);
     }
 

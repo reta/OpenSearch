@@ -200,8 +200,9 @@ final class Checkpoint {
                 final int fileVersion = CodecUtil.checkHeader(indexInput, CHECKPOINT_CODEC, VERSION_LUCENE_BIG_ENDIAN, CURRENT_VERSION);
                 assert fileVersion == CURRENT_VERSION || fileVersion == VERSION_LUCENE_BIG_ENDIAN : fileVersion;
                 assert indexInput.length() == V4_FILE_SIZE : indexInput.length();
-                return fileVersion == CURRENT_VERSION ?
-                    Checkpoint.readCheckpointV4(indexInput) : Checkpoint.readCheckpointV3(indexInput);
+                return fileVersion == CURRENT_VERSION
+                    ? Checkpoint.readCheckpointV4(indexInput)
+                    : Checkpoint.readCheckpointV3(indexInput);
             } catch (CorruptIndexException | NoSuchFileException | IndexFormatTooOldException | IndexFormatTooNewException e) {
                 throw new TranslogCorruptedException(path.toString(), e);
             }
