@@ -364,7 +364,7 @@ public class CollapsingTopDocsCollectorTests extends OpenSearchTestCase {
                 if (multivalued) {
                     return new SortedSetSortField("field", false);
                 } else {
-                    return new SortField("field", SortField.Type.STRING_VAL);
+                    return new SortField("field", SortField.Type.STRING);
                 }
             }
         };
@@ -435,7 +435,7 @@ public class CollapsingTopDocsCollectorTests extends OpenSearchTestCase {
 
         MappedFieldType fieldType = new MockFieldMapper.FakeFieldType("group");
 
-        Sort sort = new Sort(new SortField("group", SortField.Type.STRING_VAL));
+        Sort sort = new Sort(new SortField("group", SortField.Type.STRING));
 
         final CollapsingTopDocsCollector<?> collapsingCollector = CollapsingTopDocsCollector.createKeyword("group", fieldType, sort, 10);
         searcher.search(new MatchAllDocsQuery(), collapsingCollector);

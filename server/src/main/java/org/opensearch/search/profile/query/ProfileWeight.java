@@ -126,6 +126,11 @@ public final class ProfileWeight extends Weight {
     }
 
     @Override
+    public int count(LeafReaderContext context) throws IOException {
+        return subQueryWeight.count(context);
+    }
+
+    @Override
     public boolean isCacheable(LeafReaderContext ctx) {
         return false;
     }

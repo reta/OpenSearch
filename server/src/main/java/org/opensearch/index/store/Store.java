@@ -50,6 +50,7 @@ import org.apache.lucene.index.SegmentCommitInfo;
 import org.apache.lucene.index.SegmentInfos;
 import org.apache.lucene.store.AlreadyClosedException;
 import org.apache.lucene.store.BufferedChecksum;
+import org.apache.lucene.store.ByteArrayDataInput;
 import org.apache.lucene.store.ChecksumIndexInput;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FilterDirectory;
@@ -66,7 +67,6 @@ import org.opensearch.ExceptionsHelper;
 import org.opensearch.common.UUIDs;
 import org.opensearch.common.bytes.BytesReference;
 import org.opensearch.common.io.Streams;
-import org.opensearch.common.io.stream.BytesStreamInput;
 import org.opensearch.common.io.stream.BytesStreamOutput;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.io.stream.StreamOutput;
@@ -1228,7 +1228,7 @@ public class Store extends AbstractIndexShardComponent implements Closeable, Ref
             String footerDigest = null;
             if (metadata.checksum().equals(actualChecksum) && writtenBytes == metadata.length()) {
                 ByteArrayIndexInput indexInput = new ByteArrayIndexInput("checksum", this.footerChecksum);
-                footerDigest = digestToString(indexInput.readLong());
+                footerDigest = digestToString(CodecUtil.readBELong(indexInput));
                 if (metadata.checksum().equals(footerDigest)) {
                     return;
                 }
@@ -1385,9 +1385,9 @@ public class Store extends AbstractIndexShardComponent implements Closeable, Ref
                     // skipping the verified portion
                     input.seek(verifiedPosition);
                     // and checking unverified
-                    skipBytes(pos - verifiedPosition);
+                    super.seek(pos);
                 } else {
-                    skipBytes(pos - getFilePointer());
+                    super.seek(pos);
                 }
             }
         }
@@ -1417,8 +1417,12 @@ public class Store extends AbstractIndexShardComponent implements Closeable, Ref
             throw new UnsupportedOperationException();
         }
 
-        public long getStoredChecksum() throws IOException {
-            return new BytesStreamInput(checksum).readLong();
+        public long getStoredChecksum() {
+            try {
+                return CodecUtil.readBELong(new ByteArrayDataInput(checksum));
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
         }
 
         public long verify() throws CorruptIndexException, IOException {
