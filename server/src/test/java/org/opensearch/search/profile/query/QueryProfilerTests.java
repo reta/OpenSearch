@@ -202,7 +202,9 @@ public class QueryProfilerTests extends OpenSearchTestCase {
         Query query = new TermQuery(new Term("foo", "bar"));
         searcher.count(query); // will use index stats
         List<ProfileResult> results = profiler.getTree();
-        assertEquals(0, results.size());
+        assertEquals(1, results.size());
+        ProfileResult result = results.get(0);
+        assertEquals(0, (long) result.getTimeBreakdown().get("build_scorer_count"));
 
         long rewriteTime = profiler.getRewriteTime();
         assertThat(rewriteTime, greaterThan(0L));

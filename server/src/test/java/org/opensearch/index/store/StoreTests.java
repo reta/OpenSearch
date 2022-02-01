@@ -236,10 +236,10 @@ public class StoreTests extends OpenSearchTestCase {
             BytesRef bytesRef = new BytesRef(TestUtil.randomRealisticUnicodeString(random(), 10, 1024));
             output.writeBytes(bytesRef.bytes, bytesRef.offset, bytesRef.length);
         }
-        output.writeInt(CodecUtil.FOOTER_MAGIC);
-        output.writeInt(0);
+        CodecUtil.writeBEInt(output, CodecUtil.FOOTER_MAGIC);
+        CodecUtil.writeBEInt(output, 0);
         String checksum = Store.digestToString(output.getChecksum());
-        output.writeLong(output.getChecksum() + 1); // write a wrong checksum to the file
+        CodecUtil.writeBELong(output, output.getChecksum() + 1); // write a wrong checksum to the file
         output.close();
 
         IndexInput indexInput = dir.openInput("foo.bar", IOContext.DEFAULT);
