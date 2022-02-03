@@ -32,10 +32,11 @@
 
 package org.opensearch.action.search;
 
-import org.apache.lucene.store.ByteBuffersDataOutput;
 import org.opensearch.LegacyESVersion;
 import org.opensearch.Version;
+import org.opensearch.common.bytes.BytesReference;
 import org.opensearch.common.io.stream.BytesStreamInput;
+import org.opensearch.common.io.stream.BytesStreamOutput;
 import org.opensearch.common.util.concurrent.AtomicArray;
 import org.opensearch.search.SearchPhaseResult;
 import org.opensearch.search.SearchShardTarget;
@@ -58,7 +59,7 @@ final class TransportSearchHelper {
     static String buildScrollId(AtomicArray<? extends SearchPhaseResult> searchPhaseResults, Version version) {
         boolean includeContextUUID = version.onOrAfter(LegacyESVersion.V_7_7_0);
         try {
-            ByteBuffersDataOutput out = new ByteBuffersDataOutput();
+            BytesStreamOutput out = new BytesStreamOutput();
             if (includeContextUUID) {
                 out.writeString(INCLUDE_CONTEXT_UUID);
             }
@@ -78,7 +79,7 @@ final class TransportSearchHelper {
                     out.writeString(searchShardTarget.getNodeId());
                 }
             }
-            byte[] bytes = out.toArrayCopy();
+            byte[] bytes = BytesReference.toBytes(out.bytes());
             return Base64.getUrlEncoder().encodeToString(bytes);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
