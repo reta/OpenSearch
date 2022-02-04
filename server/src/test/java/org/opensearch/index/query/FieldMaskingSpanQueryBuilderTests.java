@@ -67,7 +67,8 @@ public class FieldMaskingSpanQueryBuilderTests extends AbstractQueryTestCase<Fie
         assertThat(query, instanceOf(FieldMaskingSpanQuery.class));
         FieldMaskingSpanQuery fieldMaskingSpanQuery = (FieldMaskingSpanQuery) query;
         assertThat(fieldMaskingSpanQuery.getField(), equalTo(fieldInQuery));
-        assertThat(fieldMaskingSpanQuery.getMaskedQuery(), equalTo(queryBuilder.innerQuery().toQuery(context)));
+        Query sub = queryBuilder.innerQuery().toQuery(context);
+        assertThat(fieldMaskingSpanQuery.getMaskedQuery(), equalTo(sub));
     }
 
     public void testIllegalArguments() {
@@ -79,7 +80,9 @@ public class FieldMaskingSpanQueryBuilderTests extends AbstractQueryTestCase<Fie
 
     public void testFromJson() throws IOException {
         String json = "{\n"
-            + "  \"field_masking_span\" : {\n"
+            + "  \""
+            + SPAN_FIELD_MASKING_FIELD.getPreferredName()
+            + "\" : {\n"
             + "    \"query\" : {\n"
             + "      \"span_term\" : {\n"
             + "        \"value\" : {\n"
@@ -96,17 +99,19 @@ public class FieldMaskingSpanQueryBuilderTests extends AbstractQueryTestCase<Fie
         Exception exception = expectThrows(ParsingException.class, () -> parseQuery(json));
         assertThat(
             exception.getMessage(),
-            equalTo("field_masking_span [query] as a nested span clause can't have non-default boost value [0.23]")
+            equalTo(
+                SPAN_FIELD_MASKING_FIELD.getPreferredName() + " [query] as a nested span clause can't have non-default boost value [0.23]"
+            )
         );
     }
 
     public void testJsonSpanTermWithBoost() throws IOException {
         String json = "{\n"
-            + "  \"field_masking_span\" : {\n"
+            + "  \"span_field_masking\" : {\n"
             + "    \"query\" : {\n"
             + "      \"span_term\" : {\n"
             + "        \"value\" : {\n"
-            + "          \"value\" : \"term\",\n"
+            + "          \"value\" : \"term\"\n"
             + "        }\n"
             + "      }\n"
             + "    },\n"
