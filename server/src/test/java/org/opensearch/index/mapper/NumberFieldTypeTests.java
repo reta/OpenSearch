@@ -531,6 +531,7 @@ public class NumberFieldTypeTests extends FieldTypeTestCase {
         dir.close();
     }
 
+    @AwaitsFix(bugUrl = "https://needIssue")
     public void testIndexSortIntRange() throws Exception {
         doTestIndexSortRangeQueries(NumberType.INTEGER, random()::nextInt);
     }

@@ -504,7 +504,7 @@ public class QueryStringQueryBuilderTests extends AbstractQueryTestCase<QueryStr
         Query query = queryStringQuery("test").field(TEXT_FIELD_NAME).field(KEYWORD_FIELD_NAME).toQuery(createShardContext());
         Query expected = new DisjunctionMaxQuery(
             List.of(new TermQuery(new Term(TEXT_FIELD_NAME, "test")), new TermQuery(new Term(KEYWORD_FIELD_NAME, "test"))),
-            1
+            0
         );
         assertEquals(expected, query);
     }
@@ -513,7 +513,7 @@ public class QueryStringQueryBuilderTests extends AbstractQueryTestCase<QueryStr
         Query query = queryStringQuery("test").field(TEXT_FIELD_NAME).field(KEYWORD_FIELD_NAME).toQuery(createShardContext());
         Query expected = new DisjunctionMaxQuery(
             List.of(new TermQuery(new Term(TEXT_FIELD_NAME, "test")), new TermQuery(new Term(KEYWORD_FIELD_NAME, "test"))),
-            1
+            0
         );
         assertEquals(expected, query);
     }
@@ -522,7 +522,7 @@ public class QueryStringQueryBuilderTests extends AbstractQueryTestCase<QueryStr
         Query query = queryStringQuery("test").field("mapped_str*").toQuery(createShardContext());
         Query expected = new DisjunctionMaxQuery(
             List.of(new TermQuery(new Term(TEXT_FIELD_NAME, "test")), new TermQuery(new Term(KEYWORD_FIELD_NAME, "test"))),
-            1
+            0
         );
         assertEquals(expected, query);
     }
@@ -548,7 +548,7 @@ public class QueryStringQueryBuilderTests extends AbstractQueryTestCase<QueryStr
                 new BoostQuery(new TermQuery(new Term(TEXT_FIELD_NAME, "test")), 2.2f),
                 new TermQuery(new Term(KEYWORD_FIELD_NAME, "test"))
             ),
-            1
+            0
         );
         assertEquals(expected, query);
     }
