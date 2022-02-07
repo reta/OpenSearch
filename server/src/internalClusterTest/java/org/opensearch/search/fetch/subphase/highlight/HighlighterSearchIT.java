@@ -2282,6 +2282,7 @@ public class HighlighterSearchIT extends OpenSearchIntegTestCase {
         assertHighlight(response, 0, "text", 1, 2, equalTo("This is the <em>fifth</em> sentence"));
     }
 
+    @AwaitsFix(bugUrl = "https://github.com/opensearch-project/OpenSearch/issues/2063")
     public void testPostingsHighlighter() throws Exception {
         assertAcked(prepareCreate("test").addMapping("type1", type1PostingsffsetsMapping()));
         ensureGreen();
@@ -3287,6 +3288,7 @@ public class HighlighterSearchIT extends OpenSearchIntegTestCase {
         );
     }
 
+    @AwaitsFix(bugUrl = "https://github.com/opensearch-project/OpenSearch/issues/2063")
     public void testCopyToFields() throws Exception {
         XContentBuilder b = jsonBuilder().startObject().startObject("properties");
         b.startObject("foo");
@@ -3409,6 +3411,7 @@ public class HighlighterSearchIT extends OpenSearchIntegTestCase {
         assertThat(field.getFragments()[0].string(), equalTo("<em>brown</em>"));
     }
 
+    @AwaitsFix(bugUrl = "https://github.com/opensearch-project/OpenSearch/issues/2063")
     public void testHighlightQueryRewriteDatesWithNow() throws Exception {
         assertAcked(
             client().admin()
@@ -3445,6 +3448,7 @@ public class HighlighterSearchIT extends OpenSearchIntegTestCase {
         }
     }
 
+    @AwaitsFix(bugUrl = "https://github.com/opensearch-project/OpenSearch/issues/2063")
     public void testWithNestedQuery() throws Exception {
         String mapping = Strings.toString(
             jsonBuilder().startObject()
