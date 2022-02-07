@@ -34,12 +34,10 @@ package org.opensearch.plugins;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.lucene.analysis.CharFilterFactory;
-import org.apache.lucene.analysis.TokenFilterFactory;
-import org.apache.lucene.analysis.TokenizerFactory;
 import org.apache.lucene.codecs.Codec;
 import org.apache.lucene.codecs.DocValuesFormat;
 import org.apache.lucene.codecs.PostingsFormat;
+import org.apache.lucene.util.SPIClassIterator;
 import org.opensearch.Build;
 import org.opensearch.OpenSearchException;
 import org.opensearch.Version;
@@ -78,7 +76,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Function;
@@ -566,11 +563,12 @@ public class PluginsService implements ReportingService<PluginsAndModules> {
     }
 
     private static <T> List<? extends T> createExtensions(Class<T> extensionPointType, Plugin plugin) {
+        SPIClassIterator<T> classIterator = SPIClassIterator.get(extensionPointType, plugin.getClass().getClassLoader());
         List<T> extensions = new ArrayList<>();
-        ServiceLoader.load(extensionPointType, plugin.getClass().getClassLoader())
-            .stream()
-            .map(ServiceLoader.Provider::type)
-            .forEachOrdered(service -> { extensions.add(createExtension(service, extensionPointType, plugin)); });
+        while (classIterator.hasNext()) {
+            Class<? extends T> extensionClass = classIterator.next();
+            extensions.add(createExtension(extensionClass, extensionPointType, plugin));
+        }
         return extensions;
     }
 
@@ -747,10 +745,6 @@ public class PluginsService implements ReportingService<PluginsAndModules> {
         PostingsFormat.reloadPostingsFormats(loader);
         DocValuesFormat.reloadDocValuesFormats(loader);
         Codec.reloadCodecs(loader);
-        // Analysis:
-        CharFilterFactory.reloadCharFilters(loader);
-        TokenFilterFactory.reloadTokenFilters(loader);
-        TokenizerFactory.reloadTokenizers(loader);
     }
 
     private Class<? extends Plugin> loadPluginClass(String className, ClassLoader loader) {
