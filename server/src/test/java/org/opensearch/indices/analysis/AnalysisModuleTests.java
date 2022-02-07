@@ -135,7 +135,6 @@ public class AnalysisModuleTests extends OpenSearchTestCase {
     public void testSimpleConfigurationJson() throws IOException {
         Settings settings = loadFromClasspath("/org/opensearch/index/analysis/test1.json");
         testSimpleConfiguration(settings);
-        assertWarnings("[version] for analysis [custom7] is deprecated and will be removed in a future version.");
     }
 
     public void testSimpleConfigurationYaml() throws IOException {
