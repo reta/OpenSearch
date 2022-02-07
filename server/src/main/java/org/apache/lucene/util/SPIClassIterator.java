@@ -38,7 +38,7 @@ import java.util.ServiceConfigurationError;
  * be bug-free regarding classpath order and does not instantiate or initialize
  * the classes found.
  */
-@SuppressForbidden(reason="Copied from Lucene")
+@SuppressForbidden(reason = "Taken from Lucene")
 public final class SPIClassIterator<S> implements Iterator<Class<? extends S>> {
     private static final String META_INF_SERVICES = "META-INF/services/";
 
@@ -50,8 +50,7 @@ public final class SPIClassIterator<S> implements Iterator<Class<? extends S>> {
     /** Creates a new SPI iterator to lookup services of type {@code clazz} using
      * the same {@link ClassLoader} as the argument. */
     public static <S> SPIClassIterator<S> get(Class<S> clazz) {
-        return new SPIClassIterator<>(clazz,
-            Objects.requireNonNull(clazz.getClassLoader(), () -> clazz + " has no classloader."));
+        return new SPIClassIterator<>(clazz, Objects.requireNonNull(clazz.getClassLoader(), () -> clazz + " has no classloader."));
     }
 
     /** Creates a new SPI iterator to lookup services of type {@code clazz} using the given classloader. */
@@ -154,8 +153,15 @@ public final class SPIClassIterator<S> implements Iterator<Class<? extends S>> {
             // don't initialize the class (pass false as 2nd parameter):
             return Class.forName(c, false, loader).asSubclass(clazz);
         } catch (ClassNotFoundException cnfe) {
-            throw new ServiceConfigurationError(String.format(Locale.ROOT, "An SPI class of type %s with classname %s does not exist, "+
-                "please fix the file '%s%1$s' in your classpath.", clazz.getName(), c, META_INF_SERVICES));
+            throw new ServiceConfigurationError(
+                String.format(
+                    Locale.ROOT,
+                    "An SPI class of type %s with classname %s does not exist, " + "please fix the file '%s%1$s' in your classpath.",
+                    clazz.getName(),
+                    c,
+                    META_INF_SERVICES
+                )
+            );
         }
     }
 
