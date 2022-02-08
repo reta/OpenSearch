@@ -38,7 +38,6 @@ import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.NumericDocValues;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
-import org.apache.lucene.search.DocValuesFieldExistsQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
@@ -48,6 +47,7 @@ import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.util.ArrayUtil;
 import org.opensearch.common.bytes.BytesReference;
 import org.opensearch.common.lucene.Lucene;
+import org.opensearch.common.lucene.search.Queries;
 import org.opensearch.core.internal.io.IOUtils;
 import org.opensearch.index.fieldvisitor.FieldsVisitor;
 import org.opensearch.index.mapper.SeqNoFieldMapper;
@@ -242,7 +242,7 @@ final class LuceneChangesSnapshot implements Translog.Snapshot {
             BooleanClause.Occur.MUST
         )
             // exclude non-root nested documents
-            .add(new DocValuesFieldExistsQuery(SeqNoFieldMapper.PRIMARY_TERM_NAME), BooleanClause.Occur.MUST)
+            .add(Queries.newNonNestedFilter(), BooleanClause.Occur.MUST)
             .build();
         final Sort sortedBySeqNo = new Sort(new SortField(SeqNoFieldMapper.NAME, SortField.Type.LONG));
         return indexSearcher.searchAfter(after, rangeQuery, searchBatchSize, sortedBySeqNo);

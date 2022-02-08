@@ -2278,7 +2278,6 @@ public class HighlighterSearchIT extends OpenSearchIntegTestCase {
         assertHighlight(response, 0, "text", 1, 2, equalTo("This is the <em>fifth</em> sentence"));
     }
 
-    @AwaitsFix(bugUrl = "https://github.com/opensearch-project/OpenSearch/issues/2063")
     public void testPostingsHighlighter() throws Exception {
         assertAcked(prepareCreate("test").addMapping("type1", type1PostingsffsetsMapping()));
         ensureGreen();
@@ -3290,7 +3289,6 @@ public class HighlighterSearchIT extends OpenSearchIntegTestCase {
         );
     }
 
-    @AwaitsFix(bugUrl = "https://github.com/opensearch-project/OpenSearch/issues/2063")
     public void testCopyToFields() throws Exception {
         XContentBuilder b = jsonBuilder().startObject().startObject("properties");
         b.startObject("foo");
@@ -3299,7 +3297,8 @@ public class HighlighterSearchIT extends OpenSearchIntegTestCase {
             b.field("copy_to", "foo_copy");
         }
         b.endObject();
-        b.startObject("foo_copy").field("type", "text").endObject();
+        // If field is not stored, it is looked up in source (but source has only 'foo'
+        b.startObject("foo_copy").field("type", "text").field("store", true).endObject();
         b.endObject().endObject();
         prepareCreate("test").addMapping("type", b).get();
 
@@ -3416,7 +3415,6 @@ public class HighlighterSearchIT extends OpenSearchIntegTestCase {
         assertThat(field.getFragments()[0].string(), equalTo("<em>brown</em>"));
     }
 
-    @AwaitsFix(bugUrl = "https://github.com/opensearch-project/OpenSearch/issues/2063")
     public void testHighlightQueryRewriteDatesWithNow() throws Exception {
         assertAcked(
             client().admin()
@@ -3453,7 +3451,6 @@ public class HighlighterSearchIT extends OpenSearchIntegTestCase {
         }
     }
 
-    @AwaitsFix(bugUrl = "https://github.com/opensearch-project/OpenSearch/issues/2063")
     public void testWithNestedQuery() throws Exception {
         String mapping = Strings.toString(
             jsonBuilder().startObject()
