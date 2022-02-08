@@ -43,6 +43,7 @@ import org.apache.lucene.queries.spans.SpanTermQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.PrefixQuery;
 import org.apache.lucene.search.Query;
+import org.apache.lucene.search.uhighlight.UnifiedHighlighter.HighlightFlag;
 import org.apache.lucene.util.BytesRef;
 import org.opensearch.common.CheckedSupplier;
 import org.opensearch.common.Nullable;
@@ -53,6 +54,7 @@ import java.io.IOException;
 import java.text.BreakIterator;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Locale;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -259,4 +261,12 @@ public class CustomUnifiedHighlighter extends UnifiedHighlighter {
         return offsetSource;
     }
 
+    /** Customize the highlighting flags to use by field. */
+    @Override
+    protected Set<HighlightFlag> getFlags(String field) {
+        final Set<HighlightFlag> flags = super.getFlags(field);
+        // Change the defaults introduced by https://issues.apache.org/jira/browse/LUCENE-9431
+        flags.remove(HighlightFlag.WEIGHT_MATCHES);
+        return flags;
+    }
 }
