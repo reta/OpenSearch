@@ -40,8 +40,6 @@ import org.apache.lucene.util.packed.PackedInts.Writer;
  * Simplistic compression for array of unsigned long values. Each value is {@code >= 0} and {@code
  * <=} a specified maximum value. The values are stored as packed ints, with each value consuming a
  * fixed number of bits.
- *
- * @lucene.internal
  */
 public class XPackedInts {
 
@@ -184,7 +182,6 @@ public class XPackedInts {
     /**
      * A packed integer array that can be modified.
      *
-     * @lucene.internal
      */
     public abstract static class Mutable extends Reader {
 
@@ -259,7 +256,6 @@ public class XPackedInts {
     /**
      * A simple base for Readers that keeps track of valueCount and bitsPerValue.
      *
-     * @lucene.internal
      */
     abstract static class ReaderImpl extends Reader {
         protected final int valueCount;
@@ -342,7 +338,6 @@ public class XPackedInts {
     /**
      * A write-once Writer.
      *
-     * @lucene.internal
      */
     public abstract static class XWriter extends Writer {
         protected XWriter(DataOutput out, int valueCount, int bitsPerValue) {
@@ -397,7 +392,6 @@ public class XPackedInts {
      * @return a Reader
      * @throws IOException If there is a low-level I/O error
      * @see XPackedInts#getWriterNoHeader(DataOutput, Format, int, int, int)
-     * @lucene.internal
      */
     public static Reader getReaderNoHeader(DataInput in, Format format, int version, int valueCount, int bitsPerValue) throws IOException {
         checkVersion(version);
@@ -417,7 +411,6 @@ public class XPackedInts {
      * @param in the stream to read data from
      * @return a Reader
      * @throws IOException If there is a low-level I/O error
-     * @lucene.internal
      */
     public static Reader getReader(DataInput in) throws IOException {
         final int version = CodecUtil.checkHeader(in, CODEC_NAME, VERSION_START, VERSION_CURRENT);
@@ -443,7 +436,6 @@ public class XPackedInts {
      *     iteration)
      * @return a ReaderIterator
      * @see XPackedInts#getWriterNoHeader(DataOutput, Format, int, int, int)
-     * @lucene.internal
      */
     public static ReaderIterator getReaderIteratorNoHeader(
         DataInput in,
@@ -465,7 +457,6 @@ public class XPackedInts {
      *     iteration)
      * @return an iterator to access the values
      * @throws IOException if the structure could not be retrieved.
-     * @lucene.internal
      */
     public static ReaderIterator getReaderIterator(DataInput in, int mem) throws IOException {
         final int version = CodecUtil.checkHeader(in, CODEC_NAME, VERSION_START, VERSION_CURRENT);
@@ -490,7 +481,6 @@ public class XPackedInts {
      * @param valueCount how many values the stream holds
      * @param bitsPerValue the number of bits per value
      * @return a direct Reader
-     * @lucene.internal
      */
     public static Reader getDirectReaderNoHeader(final IndexInput in, Format format, int version, int valueCount, int bitsPerValue) {
         checkVersion(version);
@@ -515,7 +505,6 @@ public class XPackedInts {
      * @param in the stream to read data from
      * @return a direct Reader
      * @throws IOException If there is a low-level I/O error
-     * @lucene.internal
      */
     public static Reader getDirectReader(IndexInput in) throws IOException {
         final int version = CodecUtil.checkHeader(in, CODEC_NAME, VERSION_START, VERSION_CURRENT);
@@ -541,7 +530,6 @@ public class XPackedInts {
      * @param bitsPerValue the number of bits available for any given value
      * @param acceptableOverheadRatio an acceptable overhead ratio per value
      * @return a mutable packed integer array
-     * @lucene.internal
      */
     public static Mutable getMutable(int valueCount, int bitsPerValue, float acceptableOverheadRatio) {
         final FormatAndBits formatAndBits = fastestFormatAndBits(valueCount, bitsPerValue, acceptableOverheadRatio);
@@ -552,7 +540,6 @@ public class XPackedInts {
      * Same as {@link #getMutable(int, int, float)} with a pre-computed number of bits per value and
      * format.
      *
-     * @lucene.internal
      */
     public static Mutable getMutable(int valueCount, int bitsPerValue, PackedInts.Format format) {
         assert valueCount >= 0;
@@ -604,7 +591,6 @@ public class XPackedInts {
      * @return a Writer
      * @see XPackedInts#getReaderIteratorNoHeader(DataInput, Format, int, int, int, int)
      * @see XPackedInts#getReaderNoHeader(DataInput, Format, int, int, int)
-     * @lucene.internal
      */
     public static XWriter getWriterNoHeader(DataOutput out, Format format, int valueCount, int bitsPerValue, int mem) {
         return new XPackedWriter(format, out, valueCount, bitsPerValue, mem);
@@ -637,7 +623,6 @@ public class XPackedInts {
      * @param acceptableOverheadRatio an acceptable overhead ratio per value
      * @return a Writer
      * @throws IOException If there is a low-level I/O error
-     * @lucene.internal
      */
     public static Writer getWriter(DataOutput out, int valueCount, int bitsPerValue, float acceptableOverheadRatio) throws IOException {
         assert valueCount >= 0;
@@ -654,7 +639,6 @@ public class XPackedInts {
      *
      * @param maxValue the maximum value that should be representable.
      * @return the amount of bits needed to represent values from 0 to maxValue.
-     * @lucene.internal
      */
     public static int bitsRequired(long maxValue) {
         if (maxValue < 0) {
@@ -667,7 +651,6 @@ public class XPackedInts {
      * Returns how many bits are required to store <code>bits</code>, interpreted as an unsigned
      * value. NOTE: This method returns at least 1.
      *
-     * @lucene.internal
      */
     public static int unsignedBitsRequired(long bits) {
         return Math.max(1, 64 - Long.numberOfLeadingZeros(bits));
@@ -678,7 +661,6 @@ public class XPackedInts {
      *
      * @param bitsPerValue the number of bits available for any given value.
      * @return the maximum value for the given bits.
-     * @lucene.internal
      */
     public static long maxValue(int bitsPerValue) {
         return bitsPerValue == 64 ? Long.MAX_VALUE : ~(~0L << bitsPerValue);
