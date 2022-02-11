@@ -142,7 +142,7 @@ public class TypeQueryBuilder extends AbstractQueryBuilder<TypeQueryBuilder> {
             // no type means no documents
             return new MatchNoDocsQuery();
         } else {
-            return Queries.newNonNestedFilter(context.indexVersionCreated());
+            return Queries.newNonNestedFilter();
         }
     }
 

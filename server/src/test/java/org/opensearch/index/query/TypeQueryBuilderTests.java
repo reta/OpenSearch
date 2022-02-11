@@ -53,7 +53,7 @@ public class TypeQueryBuilderTests extends AbstractQueryTestCase<TypeQueryBuilde
         if (createShardContext().getMapperService().documentMapper(queryBuilder.type()) == null) {
             assertEquals(new MatchNoDocsQuery(), query);
         } else {
-            assertThat(query, equalTo(Queries.newNonNestedFilter(context.indexVersionCreated())));
+            assertThat(query, equalTo(Queries.newNonNestedFilter()));
         }
     }
 
