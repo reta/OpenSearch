@@ -54,7 +54,6 @@ import java.io.IOException;
 import java.text.BreakIterator;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.Locale;
 import java.util.Set;
 import java.util.function.Predicate;
