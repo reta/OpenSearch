@@ -560,7 +560,10 @@ final class S3ClientSettings {
 
     /**
      * Class to store IAM Roles for Service Accounts (IRSA) credentials
+<<<<<<< HEAD
      * See please: https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html
+=======
+>>>>>>> 743433c18ac (Support use of IRSA for repository-s3 plugin credentials)
      */
     static class IrsaCredentials {
         private final String identityTokenFile;

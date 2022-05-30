@@ -39,6 +39,7 @@ import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.http.IdleConnectionReaper;
 
 import org.junit.AfterClass;
+
 import org.opensearch.common.settings.MockSecureSettings;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.test.OpenSearchTestCase;
@@ -173,6 +174,13 @@ public class AwsS3ServiceImplTests extends OpenSearchTestCase {
             final String clientName = clientNamePrefix + i;
             secureSettings.setString("s3.client." + clientName + ".role_arn", clientName + "_role_arn");
             secureSettings.setString("s3.client." + clientName + ".role_session_name", clientName + "_role_session_name");
+
+            // Use static AWS credentials for tests
+            secureSettings.setString("s3.client." + clientName + ".access_key", clientName + "_aws_access_key");
+            secureSettings.setString("s3.client." + clientName + ".secret_key", clientName + "_aws_secret_key");
+
+            // Use explicit region setting
+            plainSettings.put("s3.client." + clientName + ".region", "us-east1");
         }
         final Settings settings = Settings.builder().loadFromMap(plainSettings).setSecureSettings(secureSettings).build();
         final Map<String, S3ClientSettings> allClientsSettings = S3ClientSettings.load(settings);

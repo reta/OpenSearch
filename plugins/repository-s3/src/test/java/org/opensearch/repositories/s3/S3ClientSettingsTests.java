@@ -160,6 +160,7 @@ public class S3ClientSettingsTests extends OpenSearchTestCase {
         );
         final S3ClientSettings defaultSettings = settings.get("default");
         final S3ClientSettings.IrsaCredentials credentials = defaultSettings.irsaCredentials;
+
         assertThat(credentials.getIdentityTokenFile(), is("file"));
         assertThat(credentials.getRoleArn(), is("role"));
         assertThat(credentials.getRoleSessionName(), is("session"));
