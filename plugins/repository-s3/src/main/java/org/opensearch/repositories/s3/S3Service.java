@@ -73,6 +73,8 @@ import java.net.Proxy;
 import java.net.Socket;
 import java.security.SecureRandom;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.amazonaws.SDKGlobalConfiguration.AWS_ROLE_ARN_ENV_VAR;
 import static com.amazonaws.SDKGlobalConfiguration.AWS_ROLE_SESSION_NAME_ENV_VAR;
@@ -83,6 +85,7 @@ class S3Service implements Closeable {
     private static final Logger logger = LogManager.getLogger(S3Service.class);
 
     private volatile Map<S3ClientSettings, AmazonS3Reference> clientsCache = emptyMap();
+    private Set<Closeable> credentialsCache = ConcurrentHashMap.newKeySet();
 
     /**
      * Client settings calculated from static configuration and settings in the keystore.
