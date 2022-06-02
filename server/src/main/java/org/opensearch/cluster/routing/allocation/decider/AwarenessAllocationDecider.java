@@ -217,7 +217,7 @@ public class AwarenessAllocationDecider extends AllocationDecider {
             // TODO should we remove ones that are not part of full list?
 
             final int currentNodeCount = shardPerAttribute.get(node.node().getAttributes().get(awarenessAttribute));
-            final int maximumNodeCount = (shardCount + numberOfAttributes - 1) / numberOfAttributes; // ceil(shardCount/numberOfAttributes)
+            final int maximumNodeCount = 1 + (shardCount - 1) / numberOfAttributes; // ceil(shardCount/numberOfAttributes)
             if (currentNodeCount > maximumNodeCount) {
                 return allocation.decision(
                     Decision.NO,

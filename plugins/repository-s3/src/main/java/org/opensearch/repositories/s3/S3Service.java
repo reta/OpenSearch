@@ -41,6 +41,7 @@ import com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper;
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
 import com.amazonaws.auth.STSAssumeRoleWithWebIdentitySessionCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
 import com.amazonaws.http.IdleConnectionReaper;
 import com.amazonaws.http.SystemPropertyTlsKeyManagersProvider;
 import com.amazonaws.http.conn.ssl.SdkTLSSocketFactory;
@@ -280,13 +281,19 @@ class S3Service implements Closeable {
 
             AWSSecurityTokenService securityTokenService = null;
             final String region = Strings.hasLength(clientSettings.region) ? clientSettings.region : null;
+
             if (region != null || basicCredentials != null) {
-                securityTokenService = SocketAccess.doPrivileged(
-                    () -> AWSSecurityTokenServiceClientBuilder.standard()
-                        .withCredentials((basicCredentials != null) ? new AWSStaticCredentialsProvider(basicCredentials) : null)
-                        .withRegion(region)
-                        .build()
-                );
+                final String stsEndpoint = Strings.hasLength(clientSettings.stsEndpoint) ? clientSettings.stsEndpoint : null;
+                securityTokenService = SocketAccess.doPrivileged(() -> {
+                    AWSSecurityTokenServiceClientBuilder builder = AWSSecurityTokenServiceClientBuilder.standard();
+                    if (region != null && stsEndpoint != null) {
+                        builder = builder.withEndpointConfiguration(new EndpointConfiguration(stsEndpoint, region));
+                    } else {
+                        builder = builder.withRegion(region);
+                    }
+
+                    return builder.withCredentials((basicCredentials != null) ? new AWSStaticCredentialsProvider(basicCredentials) : null).build();
+                });
             }
 
             if (irsaCredentials.getIdentityTokenFile() == null) {

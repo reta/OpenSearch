@@ -90,6 +90,13 @@ final class S3ClientSettings {
         key -> SecureSetting.secureString(key, null)
     );
 
+    /** An override for the STS endpoint to connect to. */
+    static final Setting.AffixSetting<String> STS_ENDPOINT_SETTING = Setting.affixKeySetting(
+        PREFIX,
+        "sts_endpoint",
+        key -> new Setting<>(key, "", s -> s.toLowerCase(Locale.ROOT), Property.NodeScope)
+    );
+
     /** The access key (ie login id) for connecting to s3. */
     static final Setting.AffixSetting<SecureString> ACCESS_KEY_SETTING = Setting.affixKeySetting(
         PREFIX,
@@ -245,6 +252,9 @@ final class S3ClientSettings {
     /** Signer override to use or empty string to use default. */
     final String signerOverride;
 
+    /** AWS STS endpoint. */
+    final String stsEndpoint;
+
     private S3ClientSettings(
         S3BasicCredentials credentials,
         IrsaCredentials irsaCredentials,
@@ -257,7 +267,8 @@ final class S3ClientSettings {
         boolean disableChunkedEncoding,
         String region,
         String signerOverride,
-        ProxySettings proxySettings
+        ProxySettings proxySettings,
+        String stsEndpoint
     ) {
         this.credentials = credentials;
         this.irsaCredentials = irsaCredentials;
@@ -271,6 +282,7 @@ final class S3ClientSettings {
         this.region = region;
         this.signerOverride = signerOverride;
         this.proxySettings = proxySettings;
+        this.stsEndpoint = stsEndpoint;
     }
 
     /**
@@ -311,6 +323,8 @@ final class S3ClientSettings {
         }
         final String newRegion = getRepoSettingOrDefault(REGION, normalizedSettings, region);
         final String newSignerOverride = getRepoSettingOrDefault(SIGNER_OVERRIDE, normalizedSettings, signerOverride);
+        final String newStsEndpoint = getRepoSettingOrDefault(STS_ENDPOINT_SETTING, normalizedSettings, stsEndpoint);
+
         if (Objects.equals(endpoint, newEndpoint)
             && protocol == newProtocol
             && Objects.equals(proxySettings.getHostName(), newProxyHost)
@@ -339,7 +353,8 @@ final class S3ClientSettings {
             newDisableChunkedEncoding,
             newRegion,
             newSignerOverride,
-            proxySettings.recreateWithNewHostAndPort(newProxyHost, newProxyPort)
+            proxySettings.recreateWithNewHostAndPort(newProxyHost, newProxyPort),
+            newStsEndpoint
         );
     }
 
@@ -455,7 +470,8 @@ final class S3ClientSettings {
             getConfigValue(settings, clientName, DISABLE_CHUNKED_ENCODING),
             getConfigValue(settings, clientName, REGION),
             getConfigValue(settings, clientName, SIGNER_OVERRIDE),
-            validateAndCreateProxySettings(settings, clientName, awsProtocol)
+            validateAndCreateProxySettings(settings, clientName, awsProtocol),
+            getConfigValue(settings, clientName, STS_ENDPOINT_SETTING)
         );
     }
 
@@ -527,7 +543,8 @@ final class S3ClientSettings {
             && Objects.equals(disableChunkedEncoding, that.disableChunkedEncoding)
             && Objects.equals(region, that.region)
             && Objects.equals(signerOverride, that.signerOverride)
-            && Objects.equals(irsaCredentials, that.irsaCredentials);
+            && Objects.equals(irsaCredentials, that.irsaCredentials)
+            && Objects.equals(stsEndpoint, that.stsEndpoint);
     }
 
     @Override
@@ -560,10 +577,7 @@ final class S3ClientSettings {
 
     /**
      * Class to store IAM Roles for Service Accounts (IRSA) credentials
-<<<<<<< HEAD
      * See please: https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html
-=======
->>>>>>> 743433c18ac (Support use of IRSA for repository-s3 plugin credentials)
      */
     static class IrsaCredentials {
         private final String identityTokenFile;
