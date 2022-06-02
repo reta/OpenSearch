@@ -25,6 +25,17 @@ final class AmazonS3WithCredentials {
         this.credentials = credentials;
     }
 
+<<<<<<< HEAD
+=======
+    AmazonS3 getClient() {
+        return client;
+    }
+
+    AWSCredentialsProvider getCredentials() {
+        return credentials;
+    }
+
+>>>>>>> b88d2a53d97 (Address code review comments)
     AmazonS3 client() {
         return client;
     }
