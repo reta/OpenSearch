@@ -2473,12 +2473,15 @@ public class InternalEngine extends Engine {
                 iwc.setMaxFullFlushMergeWaitMillis(maxFullFlushMergeWaitMillis);
                 mergePolicy = new MergeOnFlushMergePolicy(mergePolicy);
             } else {
+                iwc.setMaxFullFlushMergeWaitMillis(0);
                 logger.warn(
                     "The {} is enabled but {} is set to 0, merge on flush will not be activated",
                     IndexSettings.INDEX_MERGE_ON_FLUSH_ENABLED.getKey(),
                     IndexSettings.INDEX_MERGE_ON_FLUSH_MAX_FULL_FLUSH_MERGE_WAIT_TIME.getKey()
                 );
             }
+        } else {
+            iwc.setMaxFullFlushMergeWaitMillis(0);
         }
 
         iwc.setMergePolicy(new OpenSearchMergePolicy(mergePolicy));
