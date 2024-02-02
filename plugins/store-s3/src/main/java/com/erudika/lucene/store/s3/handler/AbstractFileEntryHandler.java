@@ -64,7 +64,7 @@ public abstract class AbstractFileEntryHandler implements FileEntryHandler {
             if (logger.isDebugEnabled()) {
                 logger.info("fileExists({})", name);
             }
-            SocketAccess.doPrivilegedVoid(() -> s3Directory.getS3().headObject(b -> b.bucket(bucket).key(name)));
+            SocketAccess.doPrivilegedVoid(() -> s3Directory.getS3().headObject(b -> b.bucket(bucket).key(s3Directory.getKey(name))));
             return true;
         } catch (AwsServiceException | SdkClientException e) {
             return false;
@@ -77,7 +77,9 @@ public abstract class AbstractFileEntryHandler implements FileEntryHandler {
             if (logger.isDebugEnabled()) {
                 logger.info("fileModified({})", name);
             }
-            ResponseInputStream<GetObjectResponse> res = SocketAccess.doPrivileged(() -> s3Directory.getS3().getObject(b -> b.bucket(bucket).key(name)));
+            ResponseInputStream<GetObjectResponse> res = SocketAccess.doPrivileged(
+                () -> s3Directory.getS3().getObject(b -> b.bucket(bucket).key(s3Directory.getKey(name)))
+            );
             return res.response().lastModified().toEpochMilli();
         } catch (Exception e) {
             return 0L;
@@ -90,10 +92,17 @@ public abstract class AbstractFileEntryHandler implements FileEntryHandler {
             if (logger.isDebugEnabled()) {
                 logger.info("touchFile({})", name);
             }
-            ResponseInputStream<GetObjectResponse> res = SocketAccess.doPrivileged(() ->s3Directory.getS3().getObject(b -> b.bucket(bucket).key(name)));
+            ResponseInputStream<GetObjectResponse> res = SocketAccess.doPrivileged(
+                () -> s3Directory.getS3().getObject(b -> b.bucket(bucket).key(s3Directory.getKey(name)))
+            );
 
-            SocketAccess.doPrivilegedVoid(() -> s3Directory.getS3()
-                .putObject(b -> b.bucket(bucket).key(name), RequestBody.fromInputStream(res, res.response().contentLength())));
+            SocketAccess.doPrivilegedVoid(
+                () -> s3Directory.getS3()
+                    .putObject(
+                        b -> b.bucket(bucket).key(s3Directory.getKey(name)),
+                        RequestBody.fromInputStream(res, res.response().contentLength())
+                    )
+            );
         } catch (Exception e) {
             logger.error(null, e);
         }
@@ -106,8 +115,14 @@ public abstract class AbstractFileEntryHandler implements FileEntryHandler {
                 logger.info("renameFile({}, {})", from, to);
             }
             SocketAccess.doPrivilegedVoid(() -> {
-                s3Directory.getS3().copyObject(b -> b.sourceBucket(bucket).sourceKey(from).destinationBucket(bucket).destinationKey(to));
-                s3Directory.getFileSizes().put(to, s3Directory.getFileSizes().remove(from));
+                s3Directory.getS3()
+                    .copyObject(
+                        b -> b.sourceBucket(bucket)
+                            .sourceKey(s3Directory.getKey(from))
+                            .destinationBucket(bucket)
+                            .destinationKey(s3Directory.getKey(to))
+                    );
+                s3Directory.getFileSizes().put(s3Directory.getKey(to), s3Directory.getFileSizes().remove(s3Directory.getKey(from)));
             });
             deleteFile(from);
         } catch (Exception e) {
@@ -121,9 +136,14 @@ public abstract class AbstractFileEntryHandler implements FileEntryHandler {
             if (logger.isDebugEnabled()) {
                 logger.info("fileLength({})", name);
             }
-            
-            return SocketAccess.doPrivileged(() -> s3Directory.getFileSizes()
-                .computeIfAbsent(name, n -> s3Directory.getS3().getObject(b -> b.bucket(bucket).key(name)).response().contentLength()));
+
+            return SocketAccess.doPrivileged(
+                () -> s3Directory.getFileSizes()
+                    .computeIfAbsent(
+                        name,
+                        n -> s3Directory.getS3().getObject(b -> b.bucket(bucket).key(s3Directory.getKey(name))).response().contentLength()
+                    )
+            );
         } catch (Exception e) {
             logger.error(null, e);
             return 0L;
@@ -136,7 +156,7 @@ public abstract class AbstractFileEntryHandler implements FileEntryHandler {
         final S3FileEntrySettings settings = s3Directory.getSettings().getFileEntrySettings(name);
         try {
             final Class<?> inputClass = settings.getSettingAsClass(S3FileEntrySettings.INDEX_INPUT_TYPE_SETTING, null);
-            indexInput = (IndexInput) inputClass.getConstructor().newInstance();
+            indexInput = SocketAccess.doPrivilegedIOException(() -> (IndexInput) inputClass.getConstructor(String.class).newInstance(name));
         } catch (final Exception e) {
             throw new S3StoreException(
                 "Failed to create indexInput instance [" + settings.getSetting(S3FileEntrySettings.INDEX_INPUT_TYPE_SETTING) + "]",
@@ -153,7 +173,7 @@ public abstract class AbstractFileEntryHandler implements FileEntryHandler {
         final S3FileEntrySettings settings = s3Directory.getSettings().getFileEntrySettings(name);
         try {
             final Class<?> inputClass = settings.getSettingAsClass(S3FileEntrySettings.INDEX_OUTPUT_TYPE_SETTING, null);
-            indexOutput = (IndexOutput) inputClass.getConstructor().newInstance();
+            indexOutput = (IndexOutput) inputClass.getConstructor(String.class).newInstance(name);
         } catch (final Exception e) {
             throw new S3StoreException(
                 "Failed to create indexOutput instance [" + settings.getSetting(S3FileEntrySettings.INDEX_OUTPUT_TYPE_SETTING) + "]",

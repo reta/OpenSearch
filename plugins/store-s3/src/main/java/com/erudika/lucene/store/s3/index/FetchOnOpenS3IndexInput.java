@@ -43,8 +43,8 @@ public class FetchOnOpenS3IndexInput extends IndexInput implements S3IndexConfig
     // There is no synchronizaiton since Lucene RAMDirecoty performs no
     // synchronizations.
     // Need to get to the bottom of it.
-    public FetchOnOpenS3IndexInput() {
-        super("FetchOnOpenS3IndexInput");
+    public FetchOnOpenS3IndexInput(String name) {
+        super(name);
     }
 
     private long length;
@@ -58,8 +58,9 @@ public class FetchOnOpenS3IndexInput extends IndexInput implements S3IndexConfig
         if (logger.isDebugEnabled()) {
             logger.info("configure({})", name);
         }
-        ResponseInputStream<GetObjectResponse> res = SocketAccess.doPrivileged(() -> 
-            s3Directory.getS3().getObject(b -> b.bucket(s3Directory.getBucket()).key(name)));
+        ResponseInputStream<GetObjectResponse> res = SocketAccess.doPrivileged(
+            () -> s3Directory.getS3().getObject(b -> b.bucket(s3Directory.getBucket()).key(s3Directory.getKey(name)))
+        );
 
         synchronized (this) {
             length = res.response().contentLength();
@@ -104,8 +105,6 @@ public class FetchOnOpenS3IndexInput extends IndexInput implements S3IndexConfig
 
     @Override
     public IndexInput slice(final String sliceDescription, final long offset, final long length) throws IOException {
-        // TODO Auto-generated method stub
-        logger.debug("FetchOnOpenS3IndexInput.slice()");
-        return null;
+        return new SlicedIndexInput(sliceDescription, this, offset, length);
     }
 }

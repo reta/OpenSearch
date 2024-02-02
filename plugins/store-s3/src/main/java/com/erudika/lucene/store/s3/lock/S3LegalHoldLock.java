@@ -102,15 +102,24 @@ public class S3LegalHoldLock extends Lock implements S3Lock {
     }
 
     private boolean isLegalHoldOn() {
-        return SocketAccess.doPrivileged(() -> s3Directory.getS3().getObjectLegalHold(b -> b.bucket(s3Directory.getBucket()).key(name)).legalHold().status().equals(ON));
+        return SocketAccess.doPrivileged(
+            () -> s3Directory.getS3()
+                .getObjectLegalHold(b -> b.bucket(s3Directory.getBucket()).key(s3Directory.getKey(name)))
+                .legalHold()
+                .status()
+                .equals(ON)
+        );
     }
 
     private void putObjectLegalHold(ObjectLockLegalHoldStatus status) {
-        SocketAccess.doPrivilegedVoid(() -> s3Directory.getS3().putObjectLegalHold(b -> b.bucket(s3Directory.getBucket()).key(name).legalHold(l -> l.status(status))));
+        SocketAccess.doPrivilegedVoid(
+            () -> s3Directory.getS3()
+                .putObjectLegalHold(b -> b.bucket(s3Directory.getBucket()).key(s3Directory.getKey(name)).legalHold(l -> l.status(status)))
+        );
     }
 
     @Override
     public String toString() {
-        return "S3LegalHoldLock[" + s3Directory.getBucket() + "/" + name + "]";
+        return "S3LegalHoldLock[" + s3Directory.getBucket() + "/" + s3Directory.getKey(name) + "]";
     }
 }

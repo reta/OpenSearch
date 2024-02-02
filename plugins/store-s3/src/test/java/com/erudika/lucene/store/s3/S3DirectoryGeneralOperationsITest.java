@@ -36,11 +36,11 @@ public class S3DirectoryGeneralOperationsITest extends AbstractS3DirectoryITest 
 
     public static final String TEST_BUCKET = "s3-lucene-dir";
     public static final String TEST_BUCKET1 = "s3-lucene-dir1";
-    public static final String TEST_BUCKET2 = "s3-lucene-dir2";
+    public static final String TEST_BUCKET2 = "s3-lucene-dir3";
 
     @BeforeClass
     public static void setUp() throws Exception {
-        s3Directory = new S3Directory(TEST_BUCKET);
+        s3Directory = new S3Directory(TEST_BUCKET, "0");
         s3Directory.create();
     }
 
