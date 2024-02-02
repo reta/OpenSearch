@@ -74,6 +74,8 @@ public class S3Directory extends Directory {
 
     private String bucket;
 
+    private String shard;
+
     private final S3Client s3;
 
     /**
@@ -82,7 +84,7 @@ public class S3Directory extends Directory {
      * @param bucketName The bucket name
      * @throws S3StoreException
      */
-    public S3Directory(final String bucketName) throws S3StoreException {
+    public S3Directory(final String bucketName, final String shard) throws S3StoreException {
         s3 = SocketAccess.doPrivileged(() -> {
             setDefaultAwsProfilePath();
             return S3Client.builder()
@@ -91,7 +93,7 @@ public class S3Directory extends Directory {
                 .build();
         });
 
-        SocketAccess.doPrivilegedVoid(() -> initialize(bucketName, new S3DirectorySettings()));
+        SocketAccess.doPrivilegedVoid(() -> initialize(bucketName, shard, new S3DirectorySettings()));
     }
 
     /**
@@ -100,7 +102,7 @@ public class S3Directory extends Directory {
      * @param bucketName The table name that will be used
      * @param settings The settings to configure the directory
      */
-    public S3Directory(final String bucketName, final S3DirectorySettings settings) {
+    public S3Directory(final String bucketName, final String shard, final S3DirectorySettings settings) {
         s3 = SocketAccess.doPrivileged(() -> {
             setDefaultAwsProfilePath();
             return S3Client.builder()
@@ -108,11 +110,12 @@ public class S3Directory extends Directory {
                 .endpointOverride(URI.create("http://127.0.0.1:9000"))
                 .build();
         });
-        SocketAccess.doPrivilegedVoid(() -> initialize(bucketName, settings));
+        SocketAccess.doPrivilegedVoid(() -> initialize(bucketName, shard, settings));
     }
 
-    private void initialize(final String bucket, S3DirectorySettings settings) {
+    private void initialize(final String bucket, final String shard, S3DirectorySettings settings) {
         this.bucket = bucket.toLowerCase(Locale.getDefault());
+        this.shard = shard.toLowerCase(Locale.getDefault());
         this.settings = settings;
         final Map<String, S3FileEntrySettings> fileEntrySettings = settings.getFileEntrySettings();
         // go over all the file entry settings and configure them
@@ -201,7 +204,9 @@ public class S3Directory extends Directory {
                 logger.info("write.lock created in {}", bucket);
             }
             // initialize the write.lock file immediately after bucket creation
-            SocketAccess.doPrivilegedVoid(() -> s3.putObject(b -> b.bucket(bucket).key(IndexWriter.WRITE_LOCK_NAME), RequestBody.empty()));
+            SocketAccess.doPrivilegedVoid(
+                () -> s3.putObject(b -> b.bucket(bucket).key(getKey(IndexWriter.WRITE_LOCK_NAME)), RequestBody.empty())
+            );
         } catch (Exception e) {}
     }
 
@@ -209,7 +214,7 @@ public class S3Directory extends Directory {
      * Empties a bucket on S3.
      */
     public void emptyBucket() {
-        deleteObjectVersions(null);
+        deleteObjectVersions(shard);
     }
 
     /**
@@ -227,7 +232,7 @@ public class S3Directory extends Directory {
                     objects.add(ObjectIdentifier.builder().key(content.key()).versionId(content.versionId()).build());
                 });
             });
-    
+
             List<ObjectIdentifier> keyz = new LinkedList<>();
             for (ObjectIdentifier key : objects) {
                 keyz.add(key);
@@ -251,7 +256,7 @@ public class S3Directory extends Directory {
         if (logger.isDebugEnabled()) {
             logger.info("forceDeleteFile({})", name);
         }
-        deleteObjectVersions(name);
+        deleteObjectVersions(getKey(name));
     }
 
     /**
@@ -287,12 +292,15 @@ public class S3Directory extends Directory {
         if (logger.isDebugEnabled()) {
             logger.info("listAll({})", bucket);
         }
+        final String prefix = shard + "/";
         final LinkedList<String> names = new LinkedList<>();
         try {
             SocketAccess.doPrivilegedVoid(() -> {
-                ListObjectsV2Iterable responses = s3.listObjectsV2Paginator(b -> b.bucket(bucket));
+                ListObjectsV2Iterable responses = s3.listObjectsV2Paginator(b -> b.bucket(bucket).prefix(prefix));
                 for (ListObjectsV2Response response : responses) {
-                    names.addAll(response.contents().stream().map((obj) -> obj.key()).collect(Collectors.toList()));
+                    names.addAll(
+                        response.contents().stream().map((obj) -> obj.key().replaceFirst(prefix, "")).collect(Collectors.toList())
+                    );
                 }
             });
         } catch (Exception e) {
@@ -391,6 +399,10 @@ public class S3Directory extends Directory {
      */
     public String getBucket() {
         return bucket;
+    }
+
+    public String getKey(String name) {
+        return shard + "/" + name;
     }
 
     public S3DirectorySettings getSettings() {

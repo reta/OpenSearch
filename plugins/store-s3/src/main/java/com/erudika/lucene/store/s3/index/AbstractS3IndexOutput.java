@@ -17,13 +17,13 @@ package com.erudika.lucene.store.s3.index;
 
 import software.amazon.awssdk.core.sync.RequestBody;
 
+import org.opensearch.store.s3.SocketAccess;
+
 import java.io.IOException;
 import java.io.InputStream;
 
 import com.erudika.lucene.store.s3.S3Directory;
 import com.erudika.lucene.store.s3.S3FileEntrySettings;
-
-import org.opensearch.store.s3.SocketAccess;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,9 +58,13 @@ public abstract class AbstractS3IndexOutput extends S3BufferedIndexOutput {
                 logger.info("close({})", name);
             }
             final InputStream is = openInputStream();
-            SocketAccess.doPrivilegedIOException(() -> { 
+            SocketAccess.doPrivilegedIOException(() -> {
                 s3Directory.getFileSizes().put(name, length());
-                s3Directory.getS3().putObject(b -> b.bucket(s3Directory.getBucket()).key(name), RequestBody.fromInputStream(is, length()));
+                s3Directory.getS3()
+                    .putObject(
+                        b -> b.bucket(s3Directory.getBucket()).key(s3Directory.getKey(name)),
+                        RequestBody.fromInputStream(is, length())
+                    );
                 return null;
             });
         } catch (Exception e) {
