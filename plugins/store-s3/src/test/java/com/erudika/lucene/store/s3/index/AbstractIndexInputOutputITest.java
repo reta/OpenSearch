@@ -45,7 +45,7 @@ public abstract class AbstractIndexInputOutputITest extends AbstractS3DirectoryI
         settings.getDefaultFileEntrySettings().setClassSetting(S3FileEntrySettings.INDEX_INPUT_TYPE_SETTING, indexInputClass());
         settings.getDefaultFileEntrySettings().setClassSetting(S3FileEntrySettings.INDEX_OUTPUT_TYPE_SETTING, indexOutputClass());
 
-        s3Directory = new S3Directory(TEST_BUCKET, settings);
+        s3Directory = new S3Directory(TEST_BUCKET, "0", settings);
         s3Directory.create();
     }
 

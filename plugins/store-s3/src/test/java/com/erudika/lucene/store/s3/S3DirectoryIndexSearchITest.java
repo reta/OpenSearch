@@ -44,7 +44,7 @@ public class S3DirectoryIndexSearchITest extends AbstractS3DirectoryITest {
 
     @Before
     public void setUp() throws Exception {
-        directory = new S3Directory(TEST_BUCKET2);
+        directory = new S3Directory(TEST_BUCKET2, "0");
         ((S3Directory) directory).create();
         // directory = FSDirectory.open(FileSystems.getDefault().getPath("target/index"));
 

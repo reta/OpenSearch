@@ -48,7 +48,7 @@ public class S3DirectoryBenchmarkITest extends AbstractS3DirectoryITest {
 
     @BeforeClass
     public static void setUp() throws Exception {
-        s3Directory = new S3Directory(TEST_BUCKET);
+        s3Directory = new S3Directory(TEST_BUCKET, "0");
         ((S3Directory) s3Directory).create();
         ramDirectory = new MMapDirectory(FileSystems.getDefault().getPath("target/index"));
         fsDirectory = FSDirectory.open(FileSystems.getDefault().getPath("target/index"));
