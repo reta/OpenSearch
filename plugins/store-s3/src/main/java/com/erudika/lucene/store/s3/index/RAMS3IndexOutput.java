@@ -38,8 +38,8 @@ public class RAMS3IndexOutput extends IndexOutput implements S3IndexConfigurable
     private RAMIndexOutput ramIndexOutput;
     private final Checksum crc;
 
-    public RAMS3IndexOutput() {
-        super("RAMAndFileS3IndexOutput", "RAMAndFileS3IndexOutput");
+    public RAMS3IndexOutput(final String name) {
+        super("RAMAndFileS3IndexOutput", name);
         crc = new BufferedChecksum(new CRC32());
     }
 

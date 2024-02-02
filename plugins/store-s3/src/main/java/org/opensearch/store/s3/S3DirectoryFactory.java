@@ -37,7 +37,11 @@ public class S3DirectoryFactory implements DirectoryFactory {
     @Override
     public Directory newDirectory(IndexSettings indexSettings, ShardPath shardPath) throws IOException {
         final S3DirectorySettings settings = new S3DirectorySettings();
-        final S3Directory directory = new S3Directory(indexSettings.getIndex().getName(), settings);
+        final S3Directory directory = new S3Directory(
+            indexSettings.getIndex().getName(),
+            Integer.toString(shardPath.getShardId().getId()),
+            settings
+        );
         directory.create();
         return directory;
     }
