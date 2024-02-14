@@ -25,7 +25,6 @@ import java.io.IOException;
  *
  * @author kimchy
  */
-// NEED TO BE MONITORED AGAINST LUCENE (EXATCLY THE SAME)
 public abstract class ConfigurableBufferedIndexInput extends IndexInput {
 
     protected ConfigurableBufferedIndexInput(final String resourceDescription, final int bufferSize) {
@@ -40,9 +39,7 @@ public abstract class ConfigurableBufferedIndexInput extends IndexInput {
     public static final int BUFFER_SIZE = 1024;
 
     protected int bufferSize = BUFFER_SIZE;
-
     protected byte[] buffer;
-
     protected long bufferStart = 0; // position in file of buffer
     protected int bufferLength = 0; // end of valid bytes
     protected int bufferPosition = 0; // next byte to read

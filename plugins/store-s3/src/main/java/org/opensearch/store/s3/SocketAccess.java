@@ -53,6 +53,7 @@ public final class SocketAccess {
 
     /**
      * Do priviledged action
+     * @param operation operation
      */
     public static <T> T doPrivileged(PrivilegedAction<T> operation) {
         SpecialPermission.check();
@@ -61,6 +62,7 @@ public final class SocketAccess {
 
     /**
      * Do priviledged action
+     * @param operation operation
      */
     public static <T> T doPrivilegedIOException(PrivilegedExceptionAction<T> operation) throws IOException {
         SpecialPermission.check();
@@ -73,6 +75,7 @@ public final class SocketAccess {
 
     /**
      * Do priviledged action
+     * @param action action
      */
     public static void doPrivilegedVoid(Runnable action) {
         SpecialPermission.check();

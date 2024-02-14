@@ -21,8 +21,6 @@ import org.apache.lucene.store.IndexOutput;
 import java.io.IOException;
 
 import com.erudika.lucene.store.s3.S3Directory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A No Operation file entry handler. Performs no actual dirty operations, and returns empty data for read operations.
@@ -30,11 +28,10 @@ import org.slf4j.LoggerFactory;
  * @author kimchy
  */
 public class NoOpFileEntryHandler implements FileEntryHandler {
-
-    private static final Logger logger = LoggerFactory.getLogger(NoOpFileEntryHandler.class);
+    private static IndexInput indexInput = new NoOpIndexInput();
+    private static IndexOutput indexOutput = new NoOpIndexOutput();
 
     private static class NoOpIndexInput extends IndexInput {
-
         protected NoOpIndexInput() {
             super("NoOpIndexInput");
         }
@@ -69,15 +66,12 @@ public class NoOpFileEntryHandler implements FileEntryHandler {
 
         @Override
         public IndexInput slice(final String sliceDescription, final long offset, final long length) throws IOException {
-            // TODO Auto-generated method stub
-            logger.debug("NoOpFileEntryHandler.NoOpIndexInput.slice()");
             return null;
         }
     }
 
     @SuppressWarnings("unused")
     private static class NoOpIndexOutput extends IndexOutput {
-
         protected NoOpIndexOutput() {
             super("NoOpIndexOutput", "NoOpIndexOutput");
         }
@@ -110,15 +104,9 @@ public class NoOpFileEntryHandler implements FileEntryHandler {
 
         @Override
         public long getChecksum() throws IOException {
-            // TODO Auto-generated method stub
-            logger.debug("NoOpFileEntryHandler.NoOpIndexOutput.slice()");
             return 0;
         }
     }
-
-    private static IndexInput indexInput = new NoOpIndexInput();
-
-    private static IndexOutput indexOutput = new NoOpIndexOutput();
 
     @Override
     public void configure(final S3Directory s3Directory) {}
