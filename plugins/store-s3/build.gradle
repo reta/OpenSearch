@@ -227,8 +227,6 @@ thirdPartyAudit {
     'reactor.blockhound.BlockHound$Builder',
     'reactor.blockhound.integration.BlockHoundIntegration',
 
-    'software.amazon.awssdk.arns.Arn',
-    'software.amazon.awssdk.arns.ArnResource',
     'software.amazon.awssdk.crt.CRT',
     'software.amazon.awssdk.crt.auth.credentials.Credentials',
     'software.amazon.awssdk.crt.auth.credentials.CredentialsProvider',

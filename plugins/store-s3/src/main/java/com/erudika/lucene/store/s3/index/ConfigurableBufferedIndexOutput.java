@@ -25,15 +25,12 @@ import java.io.IOException;
  *
  * @author kimchy
  */
-// NEED TO BE MONITORED AGAINST LUCENE
 public abstract class ConfigurableBufferedIndexOutput extends IndexOutput {
-
     public static final int DEFAULT_BUFFER_SIZE = 16384;
 
     private byte[] buffer;
     private long bufferStart = 0; // position in file of buffer
     private int bufferPosition = 0; // position in buffer
-
     protected int bufferSize = DEFAULT_BUFFER_SIZE;
 
     protected ConfigurableBufferedIndexOutput(final String resourceDescription) {

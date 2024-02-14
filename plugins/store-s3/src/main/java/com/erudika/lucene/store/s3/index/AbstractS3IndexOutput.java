@@ -15,6 +15,8 @@
  */
 package com.erudika.lucene.store.s3.index;
 
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.sync.RequestBody;
 
 import org.opensearch.store.s3.SocketAccess;
@@ -57,29 +59,26 @@ public abstract class AbstractS3IndexOutput extends S3BufferedIndexOutput {
             if (logger.isDebugEnabled()) {
                 logger.info("close({})", name);
             }
-            final InputStream is = openInputStream();
-            SocketAccess.doPrivilegedIOException(() -> {
-                s3Directory.getFileSizes().put(name, length());
-                s3Directory.getS3()
-                    .putObject(
-                        b -> b.bucket(s3Directory.getBucket()).key(s3Directory.getKey(name)),
-                        RequestBody.fromInputStream(is, length())
-                    );
-                return null;
-            });
-        } catch (Exception e) {
-            logger.error(null, e);
+            try (final InputStream is = openInputStream()) {
+                SocketAccess.doPrivilegedIOException(() -> {
+                    s3Directory.getFileSizes().put(name, length());
+                    s3Directory.getS3()
+                        .putObject(
+                            b -> b.bucket(s3Directory.getBucket()).key(s3Directory.getKey(name)),
+                            RequestBody.fromInputStream(is, length())
+                        );
+                    return null;
+                });
+            }
+        } catch (AwsServiceException | SdkClientException e) {
+            logger.error(e.getMessage(), e);
         }
         doAfterClose();
     }
 
     protected abstract InputStream openInputStream() throws IOException;
 
-    protected void doAfterClose() throws IOException {
+    protected void doAfterClose() throws IOException {}
 
-    }
-
-    protected void doBeforeClose() throws IOException {
-
-    }
+    protected void doBeforeClose() throws IOException {}
 }
