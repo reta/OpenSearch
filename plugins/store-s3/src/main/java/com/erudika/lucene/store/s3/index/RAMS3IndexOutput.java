@@ -26,15 +26,12 @@ import java.util.zip.Checksum;
 
 import com.erudika.lucene.store.s3.S3Directory;
 import com.erudika.lucene.store.s3.S3FileEntrySettings;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * An <code>IndexOutput</code> implementation that initially writes the data to a memory buffer.
  * @author kimchy
  */
 public class RAMS3IndexOutput extends IndexOutput implements S3IndexConfigurable {
-
     private RAMIndexOutput ramIndexOutput;
     private final Checksum crc;
 
@@ -85,27 +82,19 @@ public class RAMS3IndexOutput extends IndexOutput implements S3IndexConfigurable
      * @author kimchy
      */
     class RAMIndexOutput extends AbstractS3IndexOutput {
-
-        private final Logger logger = LoggerFactory.getLogger(RAMS3IndexOutput.class);
-
         public RAMIndexOutput() {
             super("RAMS3IndexOutput");
         }
 
         private class RAMFile {
-
             ArrayList<byte[]> buffers = new ArrayList<byte[]>();
             long length;
         }
 
         private class RAMInputStream extends InputStream {
-
             private long position;
-
             private int buffer;
-
             private int bufferPos;
-
             private long markedPosition;
 
             @Override
@@ -223,32 +212,8 @@ public class RAMS3IndexOutput extends IndexOutput implements S3IndexConfigurable
             return file.length;
         }
 
-        public void flushToIndexOutput(final IndexOutput indexOutput) throws IOException {
-            super.flush();
-            if (file.buffers.isEmpty()) {
-                return;
-            }
-            if (file.buffers.size() == 1) {
-                indexOutput.writeBytes(file.buffers.get(0), (int) file.length);
-                return;
-            }
-            final int tempSize = file.buffers.size() - 1;
-            int i;
-            for (i = 0; i < tempSize; i++) {
-                indexOutput.writeBytes(file.buffers.get(i), bufferSize);
-            }
-            final int leftOver = (int) (file.length % bufferSize);
-            if (leftOver == 0) {
-                indexOutput.writeBytes(file.buffers.get(i), bufferSize);
-            } else {
-                indexOutput.writeBytes(file.buffers.get(i), leftOver);
-            }
-        }
-
         @Override
         public long getChecksum() throws IOException {
-            // TODO Auto-generated method stub
-            logger.debug("RAMS3IndexOutput.getChecksum()");
             return 0;
         }
     }

@@ -19,9 +19,9 @@ import java.nio.ByteBuffer;
  * Implementation of an IndexInput that reads from a portion of a file.
  */
 final class SlicedIndexInput extends BufferedIndexInput {
-    IndexInput base;
-    long fileOffset;
-    long length;
+    private IndexInput base;
+    private long fileOffset;
+    private long length;
 
     SlicedIndexInput(final String sliceDescription, final IndexInput base, final long offset, final long length) {
         super(
@@ -32,7 +32,7 @@ final class SlicedIndexInput extends BufferedIndexInput {
             throw new IllegalArgumentException("slice() " + sliceDescription + " out of bounds: " + base);
         }
         this.base = base.clone();
-        fileOffset = offset;
+        this.fileOffset = offset;
         this.length = length;
     }
 

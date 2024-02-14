@@ -184,7 +184,7 @@ public class S3Directory extends Directory {
             try {
                 SocketAccess.doPrivilegedVoid(() -> s3.deleteBucket(b -> b.bucket(bucket)));
             } catch (Exception e) {
-                logger.error("Bucket {} not empty - [{}]", bucket, e);
+                logger.error("Bucket {} not empty: {}", bucket, e);
             }
         }
     }
@@ -207,7 +207,9 @@ public class S3Directory extends Directory {
             SocketAccess.doPrivilegedVoid(
                 () -> s3.putObject(b -> b.bucket(bucket).key(getKey(IndexWriter.WRITE_LOCK_NAME)), RequestBody.empty())
             );
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            logger.error("Bucket {} cound not be created: {}", bucket, e);
+        }
     }
 
     /**
@@ -304,7 +306,7 @@ public class S3Directory extends Directory {
                 }
             });
         } catch (Exception e) {
-            logger.warn("{}", e.toString());
+            logger.warn(e.getMessage(), e);
         }
         return names.toArray(new String[] {});
     }
@@ -312,8 +314,6 @@ public class S3Directory extends Directory {
     @Override
     public void deleteFile(final String name) throws IOException {
         if (LuceneFileNames.isStaticFile(name)) {
-            // TODO is necessary??
-            logger.warn("S3Directory.deleteFile({}), is static file", name);
             forceDeleteFile(name);
         } else {
             getFileEntryHandler(name).deleteFile(name);
@@ -328,8 +328,6 @@ public class S3Directory extends Directory {
     @Override
     public IndexOutput createOutput(final String name, final IOContext context) throws IOException {
         if (LuceneFileNames.isStaticFile(name)) {
-            // TODO is necessary??
-            logger.warn("S3Directory.createOutput({}), is static file", name);
             forceDeleteFile(name);
         }
         return getFileEntryHandler(name).createOutput(name);
@@ -342,12 +340,12 @@ public class S3Directory extends Directory {
 
     @Override
     public void sync(final Collection<String> names) throws IOException {
-        // logger.warn("S3Directory.sync({})", names);
-        // for (final String name : names) {
-        // if (!fileExists(name)) {
-        // throw new S3StoreException("Failed to sync, file " + name + " not found");
-        // }
-        // }
+        logger.warn("S3Directory.sync({})", names);
+        for (final String name : names) {
+            if (!fileExists(name)) {
+                throw new S3StoreException("Failed to sync, file " + name + " not found");
+            }
+        }
     }
 
     @Override
@@ -382,8 +380,6 @@ public class S3Directory extends Directory {
     public IndexOutput createTempOutput(String prefix, String suffix, IOContext context) throws IOException {
         String name = prefix.concat("_temp_").concat(suffix).concat(".tmp");
         if (LuceneFileNames.isStaticFile(name)) {
-            // TODO is necessary??
-            logger.warn("S3Directory.createOutput({}), is static file", name);
             forceDeleteFile(name);
         }
         return getFileEntryHandler(name).createOutput(name);
