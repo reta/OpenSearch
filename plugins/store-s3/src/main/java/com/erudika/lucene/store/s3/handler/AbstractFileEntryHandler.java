@@ -45,17 +45,14 @@ import org.slf4j.LoggerFactory;
  * @author kimchy
  */
 public abstract class AbstractFileEntryHandler implements FileEntryHandler {
-
     private static final Logger logger = LoggerFactory.getLogger(AbstractFileEntryHandler.class);
-
     protected S3Directory s3Directory;
-
     protected String bucket;
 
     @Override
     public void configure(final S3Directory s3Directory) {
         this.s3Directory = s3Directory;
-        bucket = s3Directory.getBucket();
+        this.bucket = s3Directory.getBucket();
     }
 
     @Override
@@ -67,6 +64,7 @@ public abstract class AbstractFileEntryHandler implements FileEntryHandler {
             SocketAccess.doPrivilegedVoid(() -> s3Directory.getS3().headObject(b -> b.bucket(bucket).key(s3Directory.getKey(name))));
             return true;
         } catch (AwsServiceException | SdkClientException e) {
+            logger.error(e.getMessage(), e);
             return false;
         }
     }
@@ -77,11 +75,15 @@ public abstract class AbstractFileEntryHandler implements FileEntryHandler {
             if (logger.isDebugEnabled()) {
                 logger.info("fileModified({})", name);
             }
-            ResponseInputStream<GetObjectResponse> res = SocketAccess.doPrivileged(
-                () -> s3Directory.getS3().getObject(b -> b.bucket(bucket).key(s3Directory.getKey(name)))
-            );
-            return res.response().lastModified().toEpochMilli();
-        } catch (Exception e) {
+            try (
+                ResponseInputStream<GetObjectResponse> res = SocketAccess.doPrivileged(
+                    () -> s3Directory.getS3().getObject(b -> b.bucket(bucket).key(s3Directory.getKey(name)))
+                )
+            ) {
+                return res.response().lastModified().toEpochMilli();
+            }
+        } catch (AwsServiceException | SdkClientException e) {
+            logger.error(e.getMessage(), e);
             return 0L;
         }
     }
@@ -92,19 +94,22 @@ public abstract class AbstractFileEntryHandler implements FileEntryHandler {
             if (logger.isDebugEnabled()) {
                 logger.info("touchFile({})", name);
             }
-            ResponseInputStream<GetObjectResponse> res = SocketAccess.doPrivileged(
-                () -> s3Directory.getS3().getObject(b -> b.bucket(bucket).key(s3Directory.getKey(name)))
-            );
+            try (
+                ResponseInputStream<GetObjectResponse> res = SocketAccess.doPrivileged(
+                    () -> s3Directory.getS3().getObject(b -> b.bucket(bucket).key(s3Directory.getKey(name)))
+                )
+            ) {
 
-            SocketAccess.doPrivilegedVoid(
-                () -> s3Directory.getS3()
-                    .putObject(
-                        b -> b.bucket(bucket).key(s3Directory.getKey(name)),
-                        RequestBody.fromInputStream(res, res.response().contentLength())
-                    )
-            );
-        } catch (Exception e) {
-            logger.error(null, e);
+                SocketAccess.doPrivilegedVoid(
+                    () -> s3Directory.getS3()
+                        .putObject(
+                            b -> b.bucket(bucket).key(s3Directory.getKey(name)),
+                            RequestBody.fromInputStream(res, res.response().contentLength())
+                        )
+                );
+            }
+        } catch (AwsServiceException | SdkClientException e) {
+            logger.error(e.getMessage(), e);
         }
     }
 
@@ -114,19 +119,22 @@ public abstract class AbstractFileEntryHandler implements FileEntryHandler {
             if (logger.isDebugEnabled()) {
                 logger.info("renameFile({}, {})", from, to);
             }
+
+            final String sourceKey = s3Directory.getKey(from);
+            final String destinationKey = s3Directory.getKey(to);
+
             SocketAccess.doPrivilegedVoid(() -> {
-                s3Directory.getS3()
-                    .copyObject(
-                        b -> b.sourceBucket(bucket)
-                            .sourceKey(s3Directory.getKey(from))
-                            .destinationBucket(bucket)
-                            .destinationKey(s3Directory.getKey(to))
-                    );
-                s3Directory.getFileSizes().put(s3Directory.getKey(to), s3Directory.getFileSizes().remove(s3Directory.getKey(from)));
+                s3Directory.getS3().copyObject(b -> {
+                    b.sourceBucket(bucket).sourceKey(sourceKey).destinationBucket(bucket).destinationKey(s3Directory.getKey(to));
+                });
+                final Long removed = s3Directory.getFileSizes().remove(destinationKey);
+                if (removed != null) {
+                    s3Directory.getFileSizes().put(sourceKey, removed);
+                }
             });
             deleteFile(from);
-        } catch (Exception e) {
-            logger.error(null, e);
+        } catch (AwsServiceException | SdkClientException e) {
+            logger.error(e.getMessage(), e);
         }
     }
 
@@ -144,8 +152,8 @@ public abstract class AbstractFileEntryHandler implements FileEntryHandler {
                         n -> s3Directory.getS3().getObject(b -> b.bucket(bucket).key(s3Directory.getKey(name))).response().contentLength()
                     )
             );
-        } catch (Exception e) {
-            logger.error(null, e);
+        } catch (AwsServiceException | SdkClientException e) {
+            logger.error(e.getMessage(), e);
             return 0L;
         }
     }

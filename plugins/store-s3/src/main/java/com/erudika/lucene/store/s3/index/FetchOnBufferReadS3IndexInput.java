@@ -109,14 +109,17 @@ public class FetchOnBufferReadS3IndexInput extends S3BufferedIndexInput {
         if (logger.isDebugEnabled()) {
             logger.info("readInternal({})", name);
         }
-        ResponseInputStream<GetObjectResponse> res = SocketAccess.doPrivileged(
-            () -> s3Directory.getS3().getObject(bd -> bd.bucket(s3Directory.getBucket()).key(s3Directory.getKey(name)))
-        );
 
-        readInternal(res, buffer, 0, bufferLength);
+        try (
+            ResponseInputStream<GetObjectResponse> res = SocketAccess.doPrivileged(
+                () -> s3Directory.getS3().getObject(bd -> bd.bucket(s3Directory.getBucket()).key(s3Directory.getKey(name)))
+            )
+        ) {
+            readInternal(res, b, offset, length);
 
-        if (totalLength == -1) {
-            totalLength = res.response().contentLength();
+            if (totalLength == -1) {
+                totalLength = res.response().contentLength();
+            }
         }
     }
 

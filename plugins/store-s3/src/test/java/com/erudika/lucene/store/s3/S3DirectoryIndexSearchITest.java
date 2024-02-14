@@ -36,21 +36,17 @@ import org.junit.Test;
 
 import java.io.IOException;
 
+import static org.hamcrest.Matchers.startsWith;
 import static com.erudika.lucene.store.s3.S3DirectoryGeneralOperationsITest.TEST_BUCKET2;
+import static org.junit.Assert.assertThat;
 
 public class S3DirectoryIndexSearchITest extends AbstractS3DirectoryITest {
-
     private Directory directory;
 
     @Before
     public void setUp() throws Exception {
         directory = new S3Directory(TEST_BUCKET2, "0");
         ((S3Directory) directory).create();
-        // directory = FSDirectory.open(FileSystems.getDefault().getPath("target/index"));
-
-        // create empty index
-        // final IndexWriter iwriter = new IndexWriter(directory, getIndexWriterConfig());
-        // iwriter.close();
     }
 
     @After
@@ -61,53 +57,31 @@ public class S3DirectoryIndexSearchITest extends AbstractS3DirectoryITest {
 
     @Test
     public void testSearch() throws IOException, ParseException {
-        // To store an index on disk, use this instead:
-        // Directory directory = FSDirectory.open("/tmp/testindex");
-        // final DirectoryTemplate template = new DirectoryTemplate(directory);
-        // template.execute(new DirectoryTemplate.DirectoryCallbackWithoutResult() {
-        // @Override
-        // protected void doInDirectoryWithoutResult(final Directory dir) throws IOException {
-        // try {
-        // final DirectoryReader ireader = DirectoryReader.open(directory);
-        // final IndexSearcher isearcher = new IndexSearcher(ireader);
-        // // Parse a simple query that searches for "text":
-        //
-        // final QueryParser parser = new QueryParser("fieldname", analyzer);
-        // final Query query = parser.parse("text");
-        // final ScoreDoc[] hits = isearcher.search(query, null, 1000).scoreDocs;
-        // Assert.assertEquals(0, hits.length);
-        // ireader.close();
-        // } catch (final ParseException e) {
-        // throw new IOException(e);
-        // }
-        // }
-        //
-        // });
-        //
-        // template.execute(new DirectoryTemplate.DirectoryCallbackWithoutResult() {
-        // @Override
-        // public void doInDirectoryWithoutResult(final Directory dir) throws IOException {
-        // final IndexWriter iwriter = new IndexWriter(directory, getIndexWriterConfig());
-        // final Document doc = new Document();
-        // final String text = "This is the text to be indexed.";
-        // doc.add(new Field("fieldname", text, TextField.TYPE_STORED));
-        // iwriter.addDocument(doc);
-        // iwriter.close();
-        // }
-        // });
-        try (IndexWriter iwriter = new IndexWriter(directory, getIndexWriterConfig())) {
-            final Document doc = new Document();
-            final String text = "This is the text to be indexed.";
-            doc.add(new Field("fieldname", text, TextField.TYPE_STORED));
-            iwriter.addDocument(doc);
+        final int docs = 300;
+
+        try (final IndexWriter iwriter = new IndexWriter(directory, getIndexWriterConfig())) {
+            for (int doc = 0; doc < docs; ++doc) {
+                final Document document = new Document();
+                final String text = "This is the text to be indexed " + doc;
+                document.add(new Field("fieldname", text, TextField.TYPE_STORED));
+                iwriter.addDocument(document);
+
+                if (((doc + 1) % 10) == 0) {
+                    iwriter.commit();
+                }
+            }
+
             if (iwriter.hasUncommittedChanges()) {
                 iwriter.commit();
             }
+
             if (iwriter.isOpen()) {
                 iwriter.getDirectory().close();
             }
+
             iwriter.forceMerge(1, true);
         }
+
         // Now search the index:
         try (DirectoryReader ireader = DirectoryReader.open(directory)) {
             final IndexSearcher isearcher = new IndexSearcher(ireader);
@@ -116,31 +90,13 @@ public class S3DirectoryIndexSearchITest extends AbstractS3DirectoryITest {
             final QueryParser parser = new QueryParser("fieldname", analyzer);
             final Query query = parser.parse("text");
             final ScoreDoc[] hits = isearcher.search(query, 1000).scoreDocs;
-            Assert.assertEquals(1, hits.length);
+            Assert.assertEquals(300, hits.length);
             // Iterate through the results:
             for (final ScoreDoc hit : hits) {
                 final Document hitDoc = isearcher.doc(hit.doc);
-                Assert.assertEquals("This is the text to be indexed.", hitDoc.get("fieldname"));
-            }
-            ireader.close();
-        } catch (final ParseException e) {
-            throw new IOException(e);
-        }
-        try (DirectoryReader ireader = DirectoryReader.open(directory)) {
-            final IndexSearcher isearcher = new IndexSearcher(ireader);
-            // Parse a simple query that searches for "text":
-
-            final QueryParser parser = new QueryParser("fieldname", analyzer);
-            final Query query = parser.parse("text");
-            final ScoreDoc[] hits = isearcher.search(query, 1000).scoreDocs;
-            Assert.assertEquals(1, hits.length);
-            // Iterate through the results:
-            for (final ScoreDoc hit : hits) {
-                final Document hitDoc = isearcher.doc(hit.doc);
-                Assert.assertEquals("This is the text to be indexed.", hitDoc.get("fieldname"));
+                assertThat(hitDoc.get("fieldname"), startsWith("This is the text to be indexed "));
             }
         }
-        // Parse a simple query that searches for "text":
     }
 
     private IndexWriterConfig getIndexWriterConfig() {

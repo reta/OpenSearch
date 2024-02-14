@@ -58,17 +58,21 @@ public class FetchOnOpenS3IndexInput extends IndexInput implements S3IndexConfig
         if (logger.isDebugEnabled()) {
             logger.info("configure({})", name);
         }
-        ResponseInputStream<GetObjectResponse> res = SocketAccess.doPrivileged(
-            () -> s3Directory.getS3().getObject(b -> b.bucket(s3Directory.getBucket()).key(s3Directory.getKey(name)))
-        );
 
-        synchronized (this) {
-            length = res.response().contentLength();
-        }
-        data = new byte[(int) length];
-        res.read(data);
-        if (data.length != length) {
-            throw new IOException("read past EOF");
+        try (
+            ResponseInputStream<GetObjectResponse> res = SocketAccess.doPrivileged(
+                () -> s3Directory.getS3().getObject(b -> b.bucket(s3Directory.getBucket()).key(s3Directory.getKey(name)))
+            )
+        ) {
+
+            synchronized (this) {
+                length = res.response().contentLength();
+            }
+            data = new byte[(int) length];
+            res.read(data);
+            if (data.length != length) {
+                throw new IOException("read past EOF");
+            }
         }
     }
 
