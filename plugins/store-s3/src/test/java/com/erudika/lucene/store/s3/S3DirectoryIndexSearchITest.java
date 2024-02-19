@@ -57,7 +57,7 @@ public class S3DirectoryIndexSearchITest extends AbstractS3DirectoryITest {
 
     @Test
     public void testSearch() throws IOException, ParseException {
-        final int docs = 300;
+        final int docs = 500;
 
         try (final IndexWriter iwriter = new IndexWriter(directory, getIndexWriterConfig())) {
             for (int doc = 0; doc < docs; ++doc) {
@@ -90,7 +90,7 @@ public class S3DirectoryIndexSearchITest extends AbstractS3DirectoryITest {
             final QueryParser parser = new QueryParser("fieldname", analyzer);
             final Query query = parser.parse("text");
             final ScoreDoc[] hits = isearcher.search(query, 1000).scoreDocs;
-            Assert.assertEquals(300, hits.length);
+            Assert.assertEquals(500, hits.length);
             // Iterate through the results:
             for (final ScoreDoc hit : hits) {
                 final Document hitDoc = isearcher.doc(hit.doc);
