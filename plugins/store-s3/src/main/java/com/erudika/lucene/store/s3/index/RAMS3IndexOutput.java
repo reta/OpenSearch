@@ -158,7 +158,7 @@ public class RAMS3IndexOutput extends IndexOutput implements S3IndexConfigurable
         @Override
         public void configure(final String name, final S3Directory s3Directory, final S3FileEntrySettings settings) throws IOException {
             super.configure(name, s3Directory, settings);
-            file = new RAMFile();
+            this.file = new RAMFile();
             this.name = name;
             this.s3Directory = s3Directory;
         }

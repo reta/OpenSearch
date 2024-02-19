@@ -21,7 +21,9 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import org.apache.lucene.store.IndexInput;
 import org.opensearch.store.s3.SocketAccess;
 
+import java.io.EOFException;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import com.erudika.lucene.store.s3.S3Directory;
 import com.erudika.lucene.store.s3.S3FileEntrySettings;
@@ -57,55 +59,8 @@ public class FetchOnBufferReadS3IndexInput extends S3BufferedIndexInput {
         this.name = name;
     }
 
-    // Overriding refill here since we can execute a single query to get both
-    // the length and the buffer data
-    // resulted in not the nicest OO design, where the buffer information is
-    // protected in the S3BufferedIndexInput
-    // class
-    // and code duplication between this method and S3BufferedIndexInput.
-    // Performance is much better this way!
     @Override
-    protected void refill() throws IOException {
-        if (logger.isDebugEnabled()) {
-            logger.info("refill({})", name);
-        }
-
-        try (
-            ResponseInputStream<GetObjectResponse> res = SocketAccess.doPrivileged(
-                () -> s3Directory.getS3().getObject(b -> b.bucket(s3Directory.getBucket()).key(s3Directory.getKey(name)))
-            )
-        ) {
-            synchronized (this) {
-                if (totalLength == -1) {
-                    totalLength = res.response().contentLength();
-                }
-            }
-
-            final long start = bufferStart + bufferPosition;
-            long end = start + bufferSize;
-            if (end > length()) {
-                end = length();
-            }
-            bufferLength = (int) (end - start);
-            if (bufferLength <= 0) {
-                throw new IOException("read past EOF");
-            }
-
-            if (buffer == null) {
-                buffer = new byte[bufferSize]; // allocate buffer
-                // lazily
-                seekInternal(bufferStart);
-            }
-            // START replace read internal
-            readInternal(res, buffer, 0, bufferLength);
-
-            bufferStart = start;
-            bufferPosition = 0;
-        }
-    }
-
-    @Override
-    protected synchronized void readInternal(final byte[] b, final int offset, final int length) throws IOException {
+    protected void readInternal(ByteBuffer buffer) throws IOException {
         if (logger.isDebugEnabled()) {
             logger.info("readInternal({})", name);
         }
@@ -115,27 +70,55 @@ public class FetchOnBufferReadS3IndexInput extends S3BufferedIndexInput {
                 () -> s3Directory.getS3().getObject(bd -> bd.bucket(s3Directory.getBucket()).key(s3Directory.getKey(name)))
             )
         ) {
-            readInternal(res, b, offset, length);
-
-            if (totalLength == -1) {
-                totalLength = res.response().contentLength();
+            synchronized (this) {
+                if (totalLength == -1) {
+                    totalLength = res.response().contentLength();
+                }
             }
+
+            readInternal(res, buffer);
         }
     }
 
-    private synchronized void readInternal(
-        final ResponseInputStream<GetObjectResponse> res,
-        final byte[] b,
-        final int offset,
-        final int length
-    ) throws IOException {
+    private synchronized void readInternal(final ResponseInputStream<GetObjectResponse> res, ByteBuffer b) throws IOException {
         final long curPos = getFilePointer();
         if (curPos != position) {
             position = curPos;
         }
         res.skip(position);
-        res.read(b, offset, length);
-        position += length;
+
+        if (position + b.remaining() > totalLength) {
+            throw new EOFException("read past EOF: " + this);
+        }
+
+        try {
+            while (b.hasRemaining()) {
+                final int toRead = Math.min(getBufferSize(), b.remaining());
+                final int i = res.read(b.array(), b.position(), toRead);
+
+                if (i < 0) {
+                    // be defensive here, even though we checked before hand, something could have changed
+                    throw new EOFException(
+                        "read past EOF: "
+                            + this
+                            + " off: "
+                            + b.position()
+                            + " len: "
+                            + b.remaining()
+                            + " chunkLen: "
+                            + toRead
+                            + " end: "
+                            + totalLength
+                    );
+                }
+
+                b.position(b.position() + i);
+                position += i;
+            }
+        } catch (IOException ioe) {
+            throw new IOException(ioe.getMessage() + ": " + this, ioe);
+        }
+
     }
 
     @Override
