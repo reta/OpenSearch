@@ -39,24 +39,20 @@ public class FetchOnBufferReadS3IndexInput extends S3BufferedIndexInput {
 
     private static final Logger logger = LoggerFactory.getLogger(FetchOnBufferReadS3IndexInput.class);
 
-    private String name;
-
+    private final String name;
     // lazy intialize the length
     private long totalLength = -1;
-
     private long position = 0;
-
     private S3Directory s3Directory;
 
-    public FetchOnBufferReadS3IndexInput(final String name) {
-        super(name);
+    public FetchOnBufferReadS3IndexInput(final String name, final S3FileEntrySettings settings) {
+        super(name, settings);
+        this.name = name;
     }
 
     @Override
-    public void configure(final String name, final S3Directory s3Directory, final S3FileEntrySettings settings) throws IOException {
-        super.configure(name, s3Directory, settings);
+    public void configure(final S3Directory s3Directory) throws IOException {
         this.s3Directory = s3Directory;
-        this.name = name;
     }
 
     @Override
