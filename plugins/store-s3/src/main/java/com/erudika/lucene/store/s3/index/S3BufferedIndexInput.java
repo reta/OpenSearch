@@ -15,9 +15,6 @@
  */
 package com.erudika.lucene.store.s3.index;
 
-import java.io.IOException;
-
-import com.erudika.lucene.store.s3.S3Directory;
 import com.erudika.lucene.store.s3.S3FileEntrySettings;
 
 /**
@@ -33,12 +30,7 @@ public abstract class S3BufferedIndexInput extends ConfigurableBufferedIndexInpu
      */
     public static final String BUFFER_SIZE_SETTING = "indexInput.bufferSize";
 
-    protected S3BufferedIndexInput(final String resourceDescription) {
-        super(resourceDescription, BUFFER_SIZE);
-    }
-
-    @Override
-    public void configure(final String name, final S3Directory s3Directory, final S3FileEntrySettings settings) throws IOException {
-        setBufferSize(settings.getSettingAsInt(BUFFER_SIZE_SETTING, BUFFER_SIZE));
+    protected S3BufferedIndexInput(final String resourceDescription, final S3FileEntrySettings settings) {
+        super(resourceDescription, settings.getSettingAsInt(BUFFER_SIZE_SETTING, BUFFER_SIZE));
     }
 }

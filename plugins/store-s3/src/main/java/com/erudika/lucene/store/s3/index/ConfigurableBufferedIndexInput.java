@@ -22,11 +22,7 @@ import org.apache.lucene.store.BufferedIndexInput;
  * A simple base class that performs index input memory based buffering. Allows the buffer size to be configurable.
  */
 public abstract class ConfigurableBufferedIndexInput extends BufferedIndexInput {
-    protected ConfigurableBufferedIndexInput(final String resourceDescription, final int bufferSize) {
-        super(resourceDescription, bufferSize);
-    }
-
-    public void setBufferSize(final int newSize) {
-        // TODO: implement
+    protected ConfigurableBufferedIndexInput(final String name, final int bufferSize) {
+        super(name, bufferSize);
     }
 }
