@@ -22,8 +22,6 @@ import java.io.IOException;
 
 /**
  * A simple base class that performs index output memory based buffering. The buffer size if configurable.
- *
- * @author kimchy
  */
 public abstract class ConfigurableBufferedIndexOutput extends IndexOutput {
     public static final int DEFAULT_BUFFER_SIZE = 16384;
@@ -33,13 +31,10 @@ public abstract class ConfigurableBufferedIndexOutput extends IndexOutput {
     private int bufferPosition = 0; // position in buffer
     protected int bufferSize = DEFAULT_BUFFER_SIZE;
 
-    protected ConfigurableBufferedIndexOutput(final String resourceDescription) {
-        super(resourceDescription, "ConfigurableBufferedIndexOutput");
-    }
-
-    protected void initBuffer(final int bufferSize) {
+    protected ConfigurableBufferedIndexOutput(final String name, final int bufferSize) {
+        super("ConfigurableBufferedIndexOutput", name);
         this.bufferSize = bufferSize;
-        buffer = new byte[bufferSize];
+        this.buffer = new byte[bufferSize];
     }
 
     /**

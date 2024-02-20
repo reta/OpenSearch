@@ -18,24 +18,19 @@ package com.erudika.lucene.store.s3.index;
 import java.io.IOException;
 
 import com.erudika.lucene.store.s3.S3Directory;
-import com.erudika.lucene.store.s3.S3FileEntrySettings;
 
 /**
  * An additional interface that each implementation of <code>IndexInput</code> and <code>IndexOutput</code> must
  * implement. Used to configure newly created <code>IndexInput</code> and <code>IndexOutput</code> S3 based
  * implementation.
- *
- * @author kimchy
  */
 public interface S3IndexConfigurable {
 
     /**
      * Configures the newly created <code>IndexInput</code> or <code>IndexOutput</code> implementations.
      *
-     * @param name The name of the file entry
      * @param s3Directory The S3 directory instance
-     * @param settings The relevant file entry settings
      * @throws java.io.IOException
      */
-    void configure(String name, S3Directory s3Directory, S3FileEntrySettings settings) throws IOException;
+    void configure(S3Directory s3Directory) throws IOException;
 }
