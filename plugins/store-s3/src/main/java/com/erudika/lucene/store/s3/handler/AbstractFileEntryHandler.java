@@ -164,14 +164,16 @@ public abstract class AbstractFileEntryHandler implements FileEntryHandler {
         final S3FileEntrySettings settings = s3Directory.getSettings().getFileEntrySettings(name);
         try {
             final Class<?> inputClass = settings.getSettingAsClass(S3FileEntrySettings.INDEX_INPUT_TYPE_SETTING, null);
-            indexInput = SocketAccess.doPrivilegedIOException(() -> (IndexInput) inputClass.getConstructor(String.class).newInstance(name));
+            indexInput = SocketAccess.doPrivilegedIOException(
+                () -> (IndexInput) inputClass.getConstructor(String.class, S3FileEntrySettings.class).newInstance(name, settings)
+            );
         } catch (final Exception e) {
             throw new S3StoreException(
                 "Failed to create indexInput instance [" + settings.getSetting(S3FileEntrySettings.INDEX_INPUT_TYPE_SETTING) + "]",
                 e
             );
         }
-        ((S3IndexConfigurable) indexInput).configure(name, s3Directory, settings);
+        ((S3IndexConfigurable) indexInput).configure(s3Directory);
         return indexInput;
     }
 
@@ -181,14 +183,14 @@ public abstract class AbstractFileEntryHandler implements FileEntryHandler {
         final S3FileEntrySettings settings = s3Directory.getSettings().getFileEntrySettings(name);
         try {
             final Class<?> inputClass = settings.getSettingAsClass(S3FileEntrySettings.INDEX_OUTPUT_TYPE_SETTING, null);
-            indexOutput = (IndexOutput) inputClass.getConstructor(String.class).newInstance(name);
+            indexOutput = (IndexOutput) inputClass.getConstructor(String.class, S3FileEntrySettings.class).newInstance(name, settings);
         } catch (final Exception e) {
             throw new S3StoreException(
                 "Failed to create indexOutput instance [" + settings.getSetting(S3FileEntrySettings.INDEX_OUTPUT_TYPE_SETTING) + "]",
                 e
             );
         }
-        ((S3IndexConfigurable) indexOutput).configure(name, s3Directory, settings);
+        ((S3IndexConfigurable) indexOutput).configure(s3Directory);
         return indexOutput;
     }
 

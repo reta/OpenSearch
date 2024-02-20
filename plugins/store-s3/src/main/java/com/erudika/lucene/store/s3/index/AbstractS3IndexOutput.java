@@ -36,18 +36,16 @@ public abstract class AbstractS3IndexOutput extends S3BufferedIndexOutput {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractS3IndexOutput.class);
 
-    protected String name;
-
+    protected final String name;
     protected S3Directory s3Directory;
 
-    protected AbstractS3IndexOutput(final String resourceDescription) {
-        super(resourceDescription);
+    protected AbstractS3IndexOutput(final String resourceDescription, final S3FileEntrySettings settings) {
+        super(resourceDescription, settings);
+        this.name = resourceDescription;
     }
 
     @Override
-    public void configure(final String name, final S3Directory s3Directory, final S3FileEntrySettings settings) throws IOException {
-        super.configure(name, s3Directory, settings);
-        this.name = name;
+    public void configure(final S3Directory s3Directory) throws IOException {
         this.s3Directory = s3Directory;
     }
 

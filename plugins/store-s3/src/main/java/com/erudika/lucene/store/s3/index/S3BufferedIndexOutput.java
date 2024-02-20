@@ -15,16 +15,11 @@
  */
 package com.erudika.lucene.store.s3.index;
 
-import java.io.IOException;
-
-import com.erudika.lucene.store.s3.S3Directory;
 import com.erudika.lucene.store.s3.S3FileEntrySettings;
 
 /**
  * A simple base class that performs index output memory based buffering. The buffer size can be configured under the
  * {@link #BUFFER_SIZE_SETTING} name.
- *
- * @author kimchy
  */
 public abstract class S3BufferedIndexOutput extends ConfigurableBufferedIndexOutput implements S3IndexConfigurable {
 
@@ -33,12 +28,7 @@ public abstract class S3BufferedIndexOutput extends ConfigurableBufferedIndexOut
      */
     public static final String BUFFER_SIZE_SETTING = "indexOutput.bufferSize";
 
-    protected S3BufferedIndexOutput(final String resourceDescription) {
-        super(resourceDescription);
-    }
-
-    @Override
-    public void configure(final String name, final S3Directory s3Directory, final S3FileEntrySettings settings) throws IOException {
-        initBuffer(settings.getSettingAsInt(BUFFER_SIZE_SETTING, DEFAULT_BUFFER_SIZE));
+    protected S3BufferedIndexOutput(final String name, final S3FileEntrySettings settings) {
+        super(name, settings.getSettingAsInt(BUFFER_SIZE_SETTING, DEFAULT_BUFFER_SIZE));
     }
 }

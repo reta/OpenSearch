@@ -59,13 +59,13 @@ public abstract class AbstractIndexInputOutputITest extends AbstractS3DirectoryI
     protected abstract Class<? extends IndexOutput> indexOutputClass();
 
     @Test
-    public void testSize5() throws IOException {
-        innerTestSize(5);
+    public void testSize9() throws IOException {
+        innerTestSize(9);
     }
 
     @Test
-    public void testSize5WithinTransaction() throws IOException {
-        innertTestSizeWithinTransaction(5);
+    public void testSize9WithinTransaction() throws IOException {
+        innertTestSizeWithinTransaction(9);
     }
 
     @Test
@@ -79,23 +79,23 @@ public abstract class AbstractIndexInputOutputITest extends AbstractS3DirectoryI
     }
 
     @Test
-    public void testSize2() throws IOException {
-        innerTestSize(2);
+    public void testSize16() throws IOException {
+        innerTestSize(16);
     }
 
     @Test
-    public void testSize2WithinTransaction() throws IOException {
-        innertTestSizeWithinTransaction(2);
+    public void testSize8WithinTransaction() throws IOException {
+        innertTestSizeWithinTransaction(8);
     }
 
     @Test
-    public void testSize1() throws IOException {
-        innerTestSize(1);
+    public void testSize8() throws IOException {
+        innerTestSize(8);
     }
 
     @Test
-    public void testSize1WithinTransaction() throws IOException {
-        innertTestSizeWithinTransaction(1);
+    public void testSize16WithinTransaction() throws IOException {
+        innertTestSizeWithinTransaction(16);
     }
 
     @Test

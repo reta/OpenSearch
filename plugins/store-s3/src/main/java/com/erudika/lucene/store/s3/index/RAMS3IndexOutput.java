@@ -34,16 +34,18 @@ import com.erudika.lucene.store.s3.S3FileEntrySettings;
 public class RAMS3IndexOutput extends IndexOutput implements S3IndexConfigurable {
     private RAMIndexOutput ramIndexOutput;
     private final Checksum crc;
+    private final S3FileEntrySettings settings;
 
-    public RAMS3IndexOutput(final String name) {
+    public RAMS3IndexOutput(final String name, final S3FileEntrySettings settings) {
         super("RAMAndFileS3IndexOutput", name);
-        crc = new BufferedChecksum(new CRC32());
+        this.settings = settings;
+        this.crc = new BufferedChecksum(new CRC32());
     }
 
     @Override
-    public void configure(final String name, final S3Directory s3Directory, final S3FileEntrySettings settings) throws IOException {
-        ramIndexOutput = new RAMIndexOutput();
-        ramIndexOutput.configure(name, s3Directory, settings);
+    public void configure(final S3Directory s3Directory) throws IOException {
+        ramIndexOutput = new RAMIndexOutput(getName(), settings);
+        ramIndexOutput.configure(s3Directory);
     }
 
     @Override
@@ -82,8 +84,8 @@ public class RAMS3IndexOutput extends IndexOutput implements S3IndexConfigurable
      * @author kimchy
      */
     class RAMIndexOutput extends AbstractS3IndexOutput {
-        public RAMIndexOutput() {
-            super("RAMS3IndexOutput");
+        public RAMIndexOutput(final String name, final S3FileEntrySettings settings) {
+            super(name, settings);
         }
 
         private class RAMFile {
@@ -156,10 +158,9 @@ public class RAMS3IndexOutput extends IndexOutput implements S3IndexConfigurable
         private int pointer = 0;
 
         @Override
-        public void configure(final String name, final S3Directory s3Directory, final S3FileEntrySettings settings) throws IOException {
-            super.configure(name, s3Directory, settings);
+        public void configure(final S3Directory s3Directory) throws IOException {
+            super.configure(s3Directory);
             this.file = new RAMFile();
-            this.name = name;
             this.s3Directory = s3Directory;
         }
 

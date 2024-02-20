@@ -39,22 +39,22 @@ import org.slf4j.LoggerFactory;
 public class FetchOnOpenS3IndexInput extends IndexInput implements S3IndexConfigurable {
 
     private static final Logger logger = LoggerFactory.getLogger(FetchOnOpenS3IndexInput.class);
+    private final String name;
 
     // There is no synchronizaiton since Lucene RAMDirecoty performs no
     // synchronizations.
     // Need to get to the bottom of it.
-    public FetchOnOpenS3IndexInput(String name) {
+    public FetchOnOpenS3IndexInput(String name, final S3FileEntrySettings settings) {
         super(name);
+        this.name = name;
     }
 
     private long length;
-
     private int position = 0;
-
     private byte[] data;
 
     @Override
-    public void configure(final String name, final S3Directory s3Directory, final S3FileEntrySettings settings) throws IOException {
+    public void configure(final S3Directory s3Directory) throws IOException {
         if (logger.isDebugEnabled()) {
             logger.info("configure({})", name);
         }
