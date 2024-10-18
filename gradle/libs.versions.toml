@@ -81,3 +81,5 @@ opentelemetrysemconv  = "1.27.0-alpha"
 
 [libraries]
 jodatime = { group = "joda-time", name = "joda-time", version.ref = "joda" }
+httpcore5 = { group = "org.apache.httpcomponents.core5", name = "httpcore5", version.ref = "httpcore5" }
+httpcore5_h2 = { group = "org.apache.httpcomponents.core5", name = "httpcore5-h2", version.ref = "httpcore5" }
