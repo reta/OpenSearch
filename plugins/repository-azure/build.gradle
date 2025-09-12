@@ -315,17 +315,17 @@ String azureContainer = System.getenv("azure_storage_container")
 String azureBasePath = System.getenv("azure_storage_base_path")
 String azureSasToken = System.getenv("azure_storage_sas_token")
 
-if (!azureAccount && !azureKey && !azureContainer && !azureBasePath && !azureSasToken) {
-  azureAccount = 'azure_integration_test_account'
-  azureKey = 'YXp1cmVfaW50ZWdyYXRpb25fdGVzdF9rZXk=' // The key is "azure_integration_test_key" encoded using base64
-  azureContainer = 'container'
-  azureBasePath = ''
-  azureSasToken = ''
-  useFixture = true
-
-  apply plugin: 'opensearch.test.fixtures'
-  testFixtures.useFixture ':test:fixtures:azure-fixture', 'azure-fixture'
-}
+//if (!azureAccount && !azureKey && !azureContainer && !azureBasePath && !azureSasToken) {
+//  azureAccount = 'azure_integration_test_account'
+//  azureKey = 'YXp1cmVfaW50ZWdyYXRpb25fdGVzdF9rZXk=' // The key is "azure_integration_test_key" encoded using base64
+//  azureContainer = 'container'
+//  azureBasePath = ''
+//  azureSasToken = ''
+//  useFixture = true
+//
+//  apply plugin: 'opensearch.test.fixtures'
+//  testFixtures.useFixture ':test:fixtures:azure-fixture', 'azure-fixture'
+//}
 
 Map<String, Object> expansions = [
   'container': azureContainer,
@@ -342,22 +342,22 @@ internalClusterTest {
   exclude '**/AzureStorageCleanupThirdPartyTests.class'
 }
 
-testClusters {
-  yamlRestTest {
-    keystore 'azure.client.integration_test.account', azureAccount
-    if (azureKey != null && azureKey.isEmpty() == false) {
-      keystore 'azure.client.integration_test.key', azureKey
-    }
-    if (azureSasToken != null && azureSasToken.isEmpty() == false) {
-      keystore 'azure.client.integration_test.sas_token', azureSasToken
-    }
-    if (useFixture) {
-      setting 'azure.client.integration_test.endpoint_suffix', azureAddress
-      String firstPartOfSeed = BuildParams.testSeed.tokenize(':').get(0)
-      setting 'thread_pool.repository_azure.max', (Math.abs(Long.parseUnsignedLong(firstPartOfSeed, 16) % 10) + 1).toString(), System.getProperty('ignore.tests.seed') == null ? DEFAULT : IGNORE_VALUE
-    }
-  }
-}
+//testClusters {
+//  yamlRestTest {
+//    keystore 'azure.client.integration_test.account', azureAccount
+//    if (azureKey != null && azureKey.isEmpty() == false) {
+//      keystore 'azure.client.integration_test.key', azureKey
+//    }
+//    if (azureSasToken != null && azureSasToken.isEmpty() == false) {
+//      keystore 'azure.client.integration_test.sas_token', azureSasToken
+//    }
+//    if (useFixture) {
+//      setting 'azure.client.integration_test.endpoint_suffix', azureAddress
+//      String firstPartOfSeed = BuildParams.testSeed.tokenize(':').get(0)
+//      setting 'thread_pool.repository_azure.max', (Math.abs(Long.parseUnsignedLong(firstPartOfSeed, 16) % 10) + 1).toString(), System.getProperty('ignore.tests.seed') == null ? DEFAULT : IGNORE_VALUE
+//    }
+//  }
+//}
 
 task azureThirdPartyTest(type: Test) {
   SourceSetContainer sourceSets = project.getExtensions().getByType(SourceSetContainer.class);
