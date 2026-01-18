@@ -30,16 +30,19 @@ class ReactorNetty4NonStreamingRequestConsumer<T extends HttpContent> implements
     private final CompositeByteBuf content;
     private final Publisher<HttpContent> publisher;
     private final ReactorNetty4HttpServerTransport transport;
+    private final HttpResponseHeadersFactory responseHeadersFactory;
     private final AtomicBoolean disposed = new AtomicBoolean(false);
     private volatile FluxSink<HttpContent> emitter;
 
     ReactorNetty4NonStreamingRequestConsumer(
         ReactorNetty4HttpServerTransport transport,
+        HttpResponseHeadersFactory responseHeadersFactory,
         HttpServerRequest request,
         HttpServerResponse response,
         int maxCompositeBufferComponents
     ) {
         this.transport = transport;
+        this.responseHeadersFactory = responseHeadersFactory;
         this.request = request;
         this.response = response;
         this.content = response.alloc().compositeBuffer(maxCompositeBufferComponents);
@@ -87,7 +90,7 @@ class ReactorNetty4NonStreamingRequestConsumer<T extends HttpContent> implements
     }
 
     HttpRequest createRequest(HttpServerRequest request, CompositeByteBuf content) {
-        return new ReactorNetty4HttpRequest(request, content.retain());
+        return new ReactorNetty4HttpRequest(request, content.retain(), responseHeadersFactory);
     }
 
     @Override

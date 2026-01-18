@@ -488,6 +488,8 @@ public class ReactorNetty4HttpServerTransport extends AbstractHttpServerTranspor
             method,
             request.params()
         );
+
+        final HttpResponseHeadersFactory responseHeadersFactory = HttpResponseHeadersFactories.newDefault(settings, this);
         if (dispatchHandlerOpt.map(RestHandler::supportsStreaming).orElse(false)) {
             final ReactorNetty4StreamingRequestConsumer<HttpContent> consumer = new ReactorNetty4StreamingRequestConsumer<>(
                 this,
@@ -499,11 +501,12 @@ public class ReactorNetty4HttpServerTransport extends AbstractHttpServerTranspor
                 .switchIfEmpty(Mono.just(DefaultLastHttpContent.EMPTY_LAST_CONTENT))
                 .subscribe(consumer, error -> {}, () -> consumer.accept(DefaultLastHttpContent.EMPTY_LAST_CONTENT));
 
-            incomingStream(new ReactorNetty4HttpRequest(request), consumer.httpChannel());
+            incomingStream(new ReactorNetty4HttpRequest(request, responseHeadersFactory), consumer.httpChannel());
             return response.sendObject(consumer);
         } else {
             final ReactorNetty4NonStreamingRequestConsumer<HttpContent> consumer = new ReactorNetty4NonStreamingRequestConsumer<>(
                 this,
+                responseHeadersFactory,
                 request,
                 response,
                 maxCompositeBufferComponents
