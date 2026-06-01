@@ -9,11 +9,13 @@
 package org.opensearch.store.s3;
 
 import org.apache.lucene.store.Directory;
+import org.apache.lucene.store.LockFactory;
 import org.opensearch.index.IndexSettings;
 import org.opensearch.index.shard.ShardPath;
 import org.opensearch.plugins.IndexStorePlugin.DirectoryFactory;
 
 import java.io.IOException;
+import java.nio.file.Path;
 
 import com.erudika.lucene.store.s3.S3Directory;
 import com.erudika.lucene.store.s3.S3DirectorySettings;
@@ -44,6 +46,11 @@ public class S3DirectoryFactory implements DirectoryFactory {
         );
         directory.create();
         return directory;
+    }
+
+    @Override
+    public Directory newFSDirectory(Path location, LockFactory lockFactory, IndexSettings indexSettings) throws IOException {
+        throw new UnsupportedOperationException();
     }
 
 }
